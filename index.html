@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="sl-theme-dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AniSched Leitor Mobile</title>
+  
+  
+  <!-- Usando o CDN do Shoelace temporariamente para o esqueleto -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/dark.css" />
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace.js"></script>
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #121212;
+      color: #e0e0e0;
+    }
+    .header {
+      background-color: #0d0d0d;
+      padding: 15px;
+      text-align: center;
+      border-bottom: 1px solid #2a2a2a;
+    }
+    .container {
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .status-box {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #1a2333;
+      border: 1px solid #2b4570;
+      border-radius: 8px;
+    }
+    pre {
+      background-color: #000;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-size: 12px;
+      color: #00ff00;
+    }
+  
+    .mobile-only-btn {
+      display: none;
+    }
+    @media (max-width: 768px) {
+      .mobile-only-btn {
+        display: inline-block;
+      }
+      .ranking-external-scores {
+        transition: max-width 0.3s ease, margin 0.3s ease, padding 0.3s ease, transform 0.3s ease 0.3s, opacity 0.3s ease 0.3s;
+        transform-origin: right center;
+        overflow: hidden;
+        max-width: 200px; /* enough width for the two badges */
+        opacity: 1;
+        transform: scaleX(1);
+      }
+      #rankingContainer.hide-external .ranking-external-scores {
+        transition: transform 0.3s ease, opacity 0.3s ease, max-width 0.3s ease 0.3s, margin 0.3s ease 0.3s, padding 0.3s ease 0.3s;
+        transform: scaleX(0);
+        max-width: 0;
+        margin: 0;
+        padding: 0;
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2 style="margin: 0; color: #4CAF50;"><sl-icon name="display"></sl-icon> AniSched Leitor</h2>
+  </div>
+
+  <div class="container">
+    <p>Conecte-se com a sua conta do Google para visualizar o cronograma sincronizado.</p>
+    
+    <div style="text-align: center; margin-top: 30px;">
+      <sl-button id="btnLogin" variant="primary">
+        <sl-icon slot="prefix" name="google"></sl-icon>
+        Entrar com Google
+      </sl-button>
+    </div>
+
+    <div class="status-box" id="statusBox" style="display: none;">
+      <h3 style="margin-top: 0; color: #4da3ff; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <sl-icon name="cloud-arrow-down"></sl-icon> Status de Sincronização
+      </h3>
+      <p id="lblStatus" style="margin-bottom: 0;">Aguardando login...</p>
+    </div>
+
+    <div id="syncStatusContainer" style="display: none; background-color: #1a2333; padding: 10px 15px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #4CAF50;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <strong>Sincronizado:</strong> <span id="lblSyncDate">-</span>
+        </div>
+        <sl-badge id="badgeSyncStatus" variant="success" pill>Atualizado</sl-badge>
+      </div>
+    </div>
+
+    <div id="seasonSelectorContainer" style="display: none; margin-top: 20px; text-align: center;">
+      <div style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 450px;">
+        <sl-button id="btnAbrirGavetaTemporada" variant="primary" style="flex: 1;">
+          <sl-icon slot="prefix" name="calendar3"></sl-icon>
+          Carregando Temporadas...
+        </sl-button>
+        <sl-button id="btnToggleRanking" variant="neutral" style="flex-shrink: 0;" onclick="document.getElementById('boardContainer').classList.toggle('flipped')">
+          <sl-icon slot="prefix" name="arrow-repeat"></sl-icon> Ranking
+        </sl-button>
+      </div>
+    </div>
+
+    <!-- Gaveta (Drawer) para Temporadas -->
+    <sl-drawer id="gavetaTemporada" label="Selecione a Temporada" placement="start">
+      <div id="containerBotoesTemporada" style="display: flex; flex-direction: column; gap: 8px;">
+        <!-- Botões gerados via JS -->
+      </div>
+      <sl-button slot="footer" variant="primary" id="btnFecharGaveta">Fechar</sl-button>
+    </sl-drawer>
+
+    <div id="boardContainer" class="flip-container" style="display: none; margin-top: 20px;">
+      <div class="flipper">
+        <div class="front" style="align-items: flex-start; padding: 0; background: transparent;">
+          <div id="scheduleContainer" style="width: 100%;"></div>
+        </div>
+        <div class="back" style="align-items: flex-start; flex-direction: column; justify-content: flex-start; padding: 15px; box-sizing: border-box;">
+          <div style="display: flex; justify-content: center; align-items: center; width: 100%; position: relative; margin-top: 0; margin-bottom: 15px;">
+            <h2 style="margin: 0; text-align: center;">🏆 Ranking Oficial</h2>
+            <sl-icon-button id="btnToggleRankingScoresMobile" name="eye" class="mobile-only-btn" style="position: absolute; right: 0; font-size: 20px; color: #a4b1cd;"></sl-icon-button>
+          </div>
+          <div id="rankingContainer" style="width: 100%; display: flex; flex-direction: column; gap: 6px;"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <style>
+    /* Estilos copiados do Dashboard Original */
+    .linha-dia {
+      display: flex;
+      border-bottom: 1px solid #000;
+      min-height: 28px;
+    }
+    
+    .celula-dia {
+      width: 80px;
+      min-width: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      border-right: 1px solid #000;
+      font-size: 11px;
+      filter: brightness(0.85);
+    }
+    
+    .container-slots {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    
+    .slot-anime {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3px 8px;
+      font-weight: 500;
+      min-width: 0;
+      background-color: transparent;
+    }
+    
+    .slot-anime:not(:last-child) {
+      border-bottom: 1px solid #000;
+    }
+
+    /* Flip Card Animado (Usando CSS Grid para altura flexível) */
+    .flip-container {
+      perspective: 1000px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
+    .flipper {
+      display: grid;
+      transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+      transform-style: preserve-3d;
+      width: 100%;
+      min-width: 0;
+    }
+    .flip-container.flipped .flipper {
+      transform: rotateY(180deg);
+    }
+    .front, .back {
+      grid-area: 1 / 1;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+      display: flex;
+    }
+    .front {
+      transform: rotateY(0deg);
+      z-index: 2;
+    }
+    .back {
+      transform: rotateY(180deg);
+      background-color: #1a1b26;
+      border: 1px solid #2d2e3d;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    }
+
+    .badge-agenda {
+      transition: filter 0.2s;
+      flex-shrink: 0;
+    }
+    .badge-agenda:hover {
+      filter: brightness(1.2);
+    }
+
+    .bg-azul { 
+      background-color: var(--cor-agenda-1, #242424); 
+      color: var(--text-agenda-1, #fff);
+    }
+    .bg-verde { 
+      background-color: var(--cor-agenda-2, #2d2d2d); 
+      color: var(--text-agenda-2, #fff);
+    }
+    
+    sl-badge::part(base) {
+      font-weight: 500;
+    }
+    
+    sl-badge.badge-dia::part(base) {
+      width: 48px;
+      display: flex;
+      justify-content: center;
+      padding-left: 4px;
+      padding-right: 4px;
+    }
+    
+    #scheduleContainer {
+      margin-top: 20px; 
+      background-color: #fff; 
+      color: #000; 
+      border-radius: 8px; 
+      overflow: hidden; 
+      font-family: Arial, sans-serif;
+    }
+
+    @media (max-width: 600px) {
+      .linha-dia {
+        flex-direction: column;
+        border: 1px solid #000;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 10px;
+        border-bottom: none;
+      }
+      .celula-dia {
+        width: 100%;
+        min-height: 25px;
+        border-right: none;
+        border-bottom: 1px solid #000;
+        padding: 4px 0;
+      }
+      .slot-anime {
+        gap: 8px;
+        padding: 8px 10px;
+      }
+      #scheduleContainer {
+        background-color: transparent;
+      }
+    }
+  </style>
+
+  <script src="app.js"></script>
+</body>
+</html>
