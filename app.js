@@ -348,15 +348,11 @@ function prepararSeletorTemporadas(dados) {
   const btnAbrirGaveta = document.getElementById('btnAbrirGavetaTemporada');
   const gaveta = document.getElementById('gavetaTemporada');
   const drawerContent = document.getElementById('containerBotoesTemporada');
-  const btnFecharGaveta = document.getElementById('btnFecharGaveta');
   const container = document.getElementById('scheduleContainer');
   const boardContainer = document.getElementById('boardContainer');
   
   // Configurar botão de fechar
-  if (!btnFecharGaveta.dataset.listener) {
-    btnFecharGaveta.addEventListener('click', () => gaveta.hide());
-    btnFecharGaveta.dataset.listener = "true";
-  }
+  
   
   if (!dados || !dados.cronogramaSemanal) {
     container.style.display = 'block';
@@ -714,9 +710,9 @@ function renderizarRankingDaTemporada(temporada, dados) {
     else if (rankNum === 3) iconCor = "#cd7f32";
     
     const notaAL = anime.score_anilist ? anime.score_anilist + "%" : "N/A";
-    const notaMAL = anime.score_mal ? anime.score_mal : "N/A";
+    const notaMAL = anime.score_mal ? Number(anime.score_mal).toFixed(2) : "N/A";
     
-    const estiloBadgeBase = "display: inline-flex; align-items: center; justify-content: center; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; gap: 5px;";
+    const estiloBadgeBase = "display: inline-flex; align-items: center; justify-content: center; padding: 2px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; gap: 4px; min-width: 42px; font-variant-numeric: tabular-nums;";
     
     const badgeMAL = `
       <a href="${anime.id_mal ? 'https://myanimelist.net/anime/' + anime.id_mal : '#'}" target="_blank" style="${estiloBadgeBase} background-color: #2e51a2; color: #fff; border: 1px solid #1c336b; text-decoration: none; cursor: pointer;" title="Ver no MyAnimeList">

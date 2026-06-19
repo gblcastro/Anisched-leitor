@@ -111,7 +111,7 @@
           <sl-icon slot="prefix" name="calendar3"></sl-icon>
           Carregando Temporadas...
         </sl-button>
-        <sl-button id="btnToggleRanking" variant="neutral" style="flex-shrink: 0;" onclick="document.getElementById('boardContainer').classList.toggle('flipped')">
+        <sl-button id="btnToggleRanking" variant="neutral" style="flex-shrink: 0;" onclick="const bc = document.getElementById('boardContainer'); bc.classList.toggle('flipped'); if(window.innerWidth > 600) { document.body.style.overflowY = 'hidden'; setTimeout(() => document.body.style.overflowY = '', 600); }">
           <sl-icon slot="prefix" name="arrow-repeat"></sl-icon> Ranking
         </sl-button>
       </div>
@@ -122,7 +122,7 @@
       <div id="containerBotoesTemporada" style="display: flex; flex-direction: column; gap: 8px;">
         <!-- Botões gerados via JS -->
       </div>
-      <sl-button slot="footer" variant="primary" id="btnFecharGaveta">Fechar</sl-button>
+      
     </sl-drawer>
 
     <div id="boardContainer" class="flip-container" style="display: none; margin-top: 20px;">
