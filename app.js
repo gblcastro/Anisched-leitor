@@ -560,7 +560,7 @@ function renderizarCronogramaDaTemporada(temporada, dados) {
     listaAnimes.forEach(animeObj => {
       const detalhesExtra = (animeObj.id_anilist && dicionarioAnimes[`ani_${animeObj.id_anilist}`]) ? dicionarioAnimes[`ani_${animeObj.id_anilist}`] : {};
       const anime = { ...animeObj, ...detalhesExtra };
-      const titulo = anime.titulo;
+      const titulo = anime.titulo || anime.titulo_romaji || anime.titulo_english || "Sem Título";
       
       const slot = document.createElement("div");
       
