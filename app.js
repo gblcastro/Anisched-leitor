@@ -199,9 +199,13 @@ function processarConteudo(jsonData, modifiedTime) {
         document.documentElement.style.setProperty('--text-agenda-1', getContrastYIQ(jsonData.configuracoesUser.corAgenda1));
       }
       if (jsonData.configuracoesUser.corAgenda2) {
-        document.documentElement.style.setProperty('--cor-agenda-2', jsonData.configuracoesUser.corAgenda2);
-        document.documentElement.style.setProperty('--text-agenda-2', getContrastYIQ(jsonData.configuracoesUser.corAgenda2));
-      }
+          document.documentElement.style.setProperty('--cor-agenda-2', jsonData.configuracoesUser.corAgenda2);
+          document.documentElement.style.setProperty('--text-agenda-2', getContrastYIQ(jsonData.configuracoesUser.corAgenda2));
+        }
+        if (jsonData.configuracoesUser.corAgendaExtra) {
+          document.documentElement.style.setProperty('--cor-agenda-cinza', jsonData.configuracoesUser.corAgendaExtra);
+          document.documentElement.style.setProperty('--text-agenda-cinza', getContrastYIQ(jsonData.configuracoesUser.corAgendaExtra));
+        }
     }
     
     window.__ANISCHED_DATA = jsonData;
@@ -231,7 +235,7 @@ const STREAMING_BADGES = {
 
 const ABREV_DIAS = {
   "segunda": "SEG", "terca": "TER", "quarta": "QUA", 
-  "quinta": "QUI", "sexta": "SEX", "sabado": "SÁB", "domingo": "DOM"
+  "quinta": "QUI", "sexta": "SEX", "sabado": "SAB", "domingo": "DOM", "extra": "EXT"
 };
 
 function obterMelhorStreaming(anime, configObj) {
@@ -522,7 +526,8 @@ function renderizarCronogramaDaTemporada(temporada, dados) {
     { id: 'quinta',  nome: 'Quinta-Feira',  cor: 'bg-verde' },
     { id: 'sexta',   nome: 'Sexta-Feira',   cor: 'bg-azul' },
     { id: 'sabado',  nome: 'Sábado',        cor: 'bg-verde' },
-    { id: 'domingo', nome: 'Domingo',       cor: 'bg-azul' }
+    { id: 'domingo', nome: 'Domingo',       cor: 'bg-azul' },
+      { id: 'extra',   nome: 'Quando der',    cor: 'bg-cinza' }
   ];
   
   let animesEncontrados = false;
@@ -538,6 +543,11 @@ function renderizarCronogramaDaTemporada(temporada, dados) {
     
     const linha = document.createElement("div");
     linha.className = "linha-dia";
+      if (dia.id === "extra") {
+        linha.style.marginTop = "24px";
+        linha.style.backgroundColor = "var(--cor-agenda-cinza, #313338)";
+        linha.style.borderTop = "1px solid rgba(0,0,0,0.4)";
+      }
 
     const celulaDia = document.createElement("div");
     celulaDia.className = `celula-dia ${dia.cor}`;
