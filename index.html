@@ -116,7 +116,7 @@
           <sl-icon slot="prefix" name="calendar3"></sl-icon>
           Carregando Temporadas...
         </sl-button>
-        <sl-button id="btnToggleRanking" variant="neutral" style="flex-shrink: 0;" onclick="const bc = document.getElementById('boardContainer'); bc.classList.toggle('flipped'); if(window.innerWidth > 600) { document.body.style.overflowY = 'hidden'; setTimeout(() => document.body.style.overflowY = '', 600); }">
+        <sl-button id="btnToggleRanking" variant="neutral" style="flex-shrink: 0;" onclick="const bc = document.getElementById('boardContainer'); bc.classList.toggle('flipped'); if(window.innerWidth > 600) { const hasScrollbar = document.documentElement.scrollHeight > window.innerHeight; if(!hasScrollbar) { document.body.style.overflowY = 'hidden'; setTimeout(() => document.body.style.overflowY = '', 600); } }">
           <sl-icon slot="prefix" name="arrow-repeat"></sl-icon> Ranking
         </sl-button>
       </div>
@@ -132,8 +132,9 @@
 
     <div id="boardContainer" class="flip-container" style="display: none; margin-top: 20px;">
       <div class="flipper">
-        <div class="front" style="align-items: flex-start; padding: 0; background: transparent;">
+        <div class="front" style="align-items: flex-start; padding: 0; background: transparent; display: flex; flex-direction: column; gap: 20px;">
           <div id="scheduleContainer" style="width: 100%;"></div>
+          <div id="premiereContainer" style="width: 100%;"></div>
         </div>
         <div class="back" style="align-items: flex-start; flex-direction: column; justify-content: flex-start; padding: 15px; box-sizing: border-box;">
           <div style="display: flex; justify-content: center; align-items: center; width: 100%; position: relative; margin-top: 0; margin-bottom: 15px;">

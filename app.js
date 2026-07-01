@@ -527,7 +527,7 @@ function renderizarCronogramaDaTemporada(temporada, dados) {
     { id: 'sexta',   nome: 'Sexta-Feira',   cor: 'bg-azul' },
     { id: 'sabado',  nome: 'Sábado',        cor: 'bg-verde' },
     { id: 'domingo', nome: 'Domingo',       cor: 'bg-azul' },
-      { id: 'extra',   nome: 'Quando der',    cor: 'bg-cinza' }
+      { id: 'extra',   nome: 'Sem dia fixo',    cor: 'bg-cinza' }
   ];
   
   let animesEncontrados = false;
@@ -562,6 +562,17 @@ function renderizarCronogramaDaTemporada(temporada, dados) {
       const anime = { ...animeObj, ...detalhesExtra };
       const titulo = anime.titulo || anime.titulo_romaji || anime.titulo_english || "Sem Título";
       
+      let colorStyle = "inherit";
+      let isToggled = "false";
+      let aId = String(anime.id_anilist || anime.id_mal || 0);
+      try {
+        const destacados = JSON.parse(localStorage.getItem("animesDestacados") || "[]");
+        if (destacados.includes(aId) || destacados.includes(Number(aId))) {
+           colorStyle = "#8a0303";
+           isToggled = "true";
+        }
+      } catch(e) {}
+      
       const slot = document.createElement("div");
       
       // Lado Esquerdo: Badge de Horário/Dia + Título
@@ -576,7 +587,7 @@ function renderizarCronogramaDaTemporada(temporada, dados) {
         
         horaHtml = `
           <span class="badge-agenda badge-agenda-wrapper" style="display: inline-flex; margin-right: 8px;">
-            <sl-badge class="badge-dia" variant="neutral">${textoBadge}</sl-badge>
+            <sl-badge class="badge-dia" variant="neutral" style="cursor:pointer;" onclick="window.toggleAnimeColor(this, '${aId}')">${textoBadge}</sl-badge>
           </span>
         `;
       }
@@ -584,7 +595,7 @@ function renderizarCronogramaDaTemporada(temporada, dados) {
       let esquerdoHtml = `
         <div style="display: flex; align-items: center; flex: 1; min-width: 0;">
           ${horaHtml}
-          <span style="font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: inherit;" title="${titulo}">
+          <span data-toggled="${isToggled}" style="font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: ${colorStyle};" title="${titulo}">
             ${titulo}
           </span>
         </div>
@@ -648,6 +659,10 @@ function renderizarCronogramaDaTemporada(temporada, dados) {
   
   if (typeof renderizarRankingDaTemporada === 'function') {
     renderizarRankingDaTemporada(temporada, dados);
+  }
+  
+  if (typeof renderizarListaEstreias === 'function') {
+    renderizarListaEstreias(temporada, dados);
   }
 }
 
@@ -784,3 +799,199 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+window.toggleAnimeColor = function(el, animeId) {
+  let destacados = [];
+  try {
+    destacados = JSON.parse(localStorage.getItem("animesDestacados") || "[]");
+  } catch(e) {}
+  
+  const spanTitulo = el.parentElement.nextElementSibling;
+  
+  if (spanTitulo.dataset.toggled === 'true') {
+    spanTitulo.style.color = 'inherit';
+    spanTitulo.dataset.toggled = 'false';
+    destacados = destacados.filter(id => id !== animeId);
+  } else {
+    spanTitulo.style.color = '#8a0303';
+    spanTitulo.dataset.toggled = 'true';
+    if (!destacados.includes(animeId)) destacados.push(animeId);
+  }
+  
+  localStorage.setItem("animesDestacados", JSON.stringify(destacados));
+};
+
+function renderizarListaEstreias(temporada, dados) {
+  const container = document.getElementById('premiereContainer');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  if (!dados.cronogramaSemanal || !dados.cronogramaSemanal[temporada]) return;
+  
+  const todosAnimes = [];
+  Object.values(dados.cronogramaSemanal[temporada]).forEach(listaDia => {
+    if (Array.isArray(listaDia)) {
+      listaDia.forEach(anime => {
+        if (anime.data_estreia && !anime.isManual) {
+          todosAnimes.push(anime);
+        }
+      });
+    }
+  });
+  
+  if (todosAnimes.length === 0) return;
+  
+  // Sort
+  todosAnimes.sort((a, b) => {
+    const parseDate = (dateStr) => {
+      if (!dateStr) return 0;
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
+      }
+      return 0;
+    };
+    const tA = parseDate(a.data_estreia);
+    const tB = parseDate(b.data_estreia);
+    if (tA !== tB) return tA - tB;
+    
+    // Sort by time if date is the same
+    const parseTime = (timeStr) => {
+      if (!timeStr) return 0;
+      const parts = timeStr.split(':');
+      if (parts.length >= 2) return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+      return 0;
+    };
+    return parseTime(a.hora_estreia) - parseTime(b.hora_estreia);
+  });
+  
+  const tituloSecao = document.createElement('h2');
+  tituloSecao.innerText = '📅 Próximas Estreias';
+  tituloSecao.style.textAlign = 'center';
+  tituloSecao.style.marginTop = '25px';
+  tituloSecao.style.marginBottom = '20px';
+  tituloSecao.style.fontSize = '22px';
+  tituloSecao.style.fontWeight = 'bold';
+  tituloSecao.style.color = 'var(--sl-color-neutral-900)';
+  container.appendChild(tituloSecao);
+  
+  const lista = document.createElement('div');
+  lista.style.display = 'grid';
+  lista.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+  lista.style.gap = '15px';
+  
+  // Group by date
+  const agrupados = {};
+  todosAnimes.forEach(anime => {
+    const dataText = anime.data_estreia.substring(0, 5);
+    if (!agrupados[dataText]) agrupados[dataText] = [];
+    agrupados[dataText].push(anime);
+  });
+  
+  const today = new Date();
+  const todayStr = String(today.getDate()).padStart(2, '0') + '/' + String(today.getMonth() + 1).padStart(2, '0');
+  
+  Object.keys(agrupados).forEach(data => {
+    const groupDiv = document.createElement('div');
+    groupDiv.style.display = 'flex';
+    groupDiv.style.flexDirection = 'column';
+    groupDiv.style.borderRadius = '10px';
+    groupDiv.style.overflow = 'hidden';
+    groupDiv.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+    groupDiv.style.border = '1px solid rgba(255,255,255,0.05)';
+    groupDiv.style.backgroundColor = 'rgba(0,0,0,0.2)';
+    
+    const header = document.createElement('div');
+    if (data === todayStr) {
+      header.style.backgroundColor = '#e53e3e'; // Different color for today
+      header.style.color = '#fff';
+      header.innerHTML = `<sl-icon name="calendar-date"></sl-icon> ${data} (Hoje)`;
+    } else {
+      header.style.backgroundColor = 'var(--cor-agenda-1, #4c6ef5)';
+      header.style.color = 'var(--text-agenda-1, #fff)';
+      header.innerHTML = `<sl-icon name="calendar-event"></sl-icon> ${data}`;
+    }
+    header.style.padding = '10px 15px';
+    header.style.fontWeight = 'bold';
+    header.style.fontSize = '16px';
+    header.style.display = 'flex';
+    header.style.alignItems = 'center';
+    header.style.gap = '8px';
+    groupDiv.appendChild(header);
+    
+    const itemsContainer = document.createElement('div');
+    itemsContainer.style.padding = '10px';
+    itemsContainer.style.display = 'flex';
+    itemsContainer.style.flexDirection = 'column';
+    itemsContainer.style.gap = '8px';
+    
+    agrupados[data].forEach(anime => {
+      const horaText = anime.hora_estreia ? `${anime.hora_estreia}` : '--:--';
+      const nome = anime.titulo || anime.titulo_romaji || anime.titulo_english || "Sem Título";
+      
+      let colorStyle = "inherit";
+      let isToggled = "false";
+      let aId = String(anime.id_anilist || anime.id_mal || 0);
+      try {
+        const destacados = JSON.parse(localStorage.getItem("estreiasDestacadas") || "[]");
+        if (destacados.includes(aId) || destacados.includes(Number(aId))) {
+           colorStyle = "#8a0303";
+           isToggled = "true";
+        }
+      } catch(e) {}
+      
+      const item = document.createElement('div');
+      item.style.display = 'flex';
+      item.style.alignItems = 'center';
+      item.style.gap = '10px';
+      item.style.padding = '8px 12px';
+      item.style.backgroundColor = 'var(--sl-color-neutral-0)';
+      item.style.borderRadius = '6px';
+      item.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
+      item.style.cursor = 'default';
+      
+      item.onmouseenter = () => {
+        item.style.transform = 'translateY(-2px)';
+        item.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+      };
+      item.onmouseleave = () => {
+        item.style.transform = 'none';
+        item.style.boxShadow = 'none';
+      };
+      
+      item.innerHTML = `
+        <span style="font-weight: bold; color: var(--cor-agenda-1, #4c6ef5); min-width: 45px; font-size: 14px; cursor: pointer;" onclick="window.togglePremiereColor(this, '${aId}')">${horaText}</span>
+        <span data-toggled="${isToggled}" style="flex: 1; font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: ${colorStyle};" title="${nome}">
+          ${nome}
+        </span>
+      `;
+      itemsContainer.appendChild(item);
+    });
+    
+    groupDiv.appendChild(itemsContainer);
+    lista.appendChild(groupDiv);
+  });
+  
+  container.appendChild(lista);
+}
+
+window.togglePremiereColor = function(el, animeId) {
+  let destacados = [];
+  try {
+    destacados = JSON.parse(localStorage.getItem("estreiasDestacadas") || "[]");
+  } catch(e) {}
+  
+  const spanTitulo = el.nextElementSibling;
+  
+  if (spanTitulo.dataset.toggled === 'true') {
+    spanTitulo.style.color = 'inherit';
+    spanTitulo.dataset.toggled = 'false';
+    destacados = destacados.filter(id => id !== animeId);
+  } else {
+    spanTitulo.style.color = '#8a0303';
+    spanTitulo.dataset.toggled = 'true';
+    if (!destacados.includes(animeId)) destacados.push(animeId);
+  }
+  
+  localStorage.setItem("estreiasDestacadas", JSON.stringify(destacados));
+};
