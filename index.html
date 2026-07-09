@@ -80,17 +80,26 @@
   </style>
 </head>
 <body>
-  <div class="header">
-    <h2 style="margin: 0; color: #4CAF50;"><sl-icon name="display"></sl-icon> AniSched Leitor</h2>
+  <div class="header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h2 style="margin: 0; color: #4CAF50;"><sl-icon name="display"></sl-icon> <span data-i18n="webapp_title">AniSched Leitor</span></h2>
+    <sl-dropdown>
+      <sl-button slot="trigger" variant="text" style="color: #fff; font-size: 1.5rem;">
+        <sl-icon name="translate" label="Language"></sl-icon>
+      </sl-button>
+      <sl-menu>
+        <sl-menu-item id="menu-lang-pt-BR" value="pt-BR" onclick="globalThis.I18n.setLanguage('pt-BR')">Português (BR)</sl-menu-item>
+        <sl-menu-item id="menu-lang-en-US" value="en-US" onclick="globalThis.I18n.setLanguage('en-US')">English (US)</sl-menu-item>
+      </sl-menu>
+    </sl-dropdown>
   </div>
 
   <div class="container">
-    <p>Conecte-se com a sua conta do Google para visualizar o cronograma sincronizado.</p>
+    <p data-i18n="webapp_connect_google">Conecte-se com a sua conta do Google para visualizar o cronograma sincronizado.</p>
     
     <div style="text-align: center; margin-top: 30px;">
       <sl-button id="btnLogin" variant="primary">
         <sl-icon slot="prefix" name="google"></sl-icon>
-        Entrar com Google
+        <span data-i18n="webapp_login_google">Entrar com Google</span>
       </sl-button>
     </div>
 
@@ -98,15 +107,15 @@
       <h3 style="margin-top: 0; color: #4da3ff; display: flex; align-items: center; justify-content: center; gap: 8px;">
         <sl-icon name="cloud-arrow-down"></sl-icon> Status de Sincronização
       </h3>
-      <p id="lblStatus" style="margin-bottom: 0;">Aguardando login...</p>
+      <p id="lblStatus" style="margin-bottom: 0;"><span data-i18n="webapp_waiting_login">Aguardando login...</span></p>
     </div>
 
     <div id="syncStatusContainer" style="display: none; background-color: #1a2333; padding: 10px 15px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #4CAF50;">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
         <div>
-          <strong>Sincronizado:</strong> <span id="lblSyncDate">-</span>
+          <strong data-i18n="webapp_synced">Sincronizado:</strong> <span id="lblSyncDate">-</span>
         </div>
-        <sl-badge id="badgeSyncStatus" variant="success" pill>Atualizado</sl-badge>
+        <sl-badge id="badgeSyncStatus" variant="success" pill data-i18n="webapp_updated">Atualizado</sl-badge>
       </div>
     </div>
 
@@ -114,16 +123,16 @@
       <div style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 450px;">
         <sl-button id="btnAbrirGavetaTemporada" variant="primary" style="flex: 1;">
           <sl-icon slot="prefix" name="calendar3"></sl-icon>
-          Carregando Temporadas...
+          <span data-i18n="webapp_loading_seasons">Carregando Temporadas...</span>
         </sl-button>
         <sl-button id="btnToggleRanking" variant="neutral" style="flex-shrink: 0;" onclick="const bc = document.getElementById('boardContainer'); bc.classList.toggle('flipped'); if(window.innerWidth > 600) { const hasScrollbar = document.documentElement.scrollHeight > window.innerHeight; if(!hasScrollbar) { document.body.style.overflowY = 'hidden'; setTimeout(() => document.body.style.overflowY = '', 600); } }">
-          <sl-icon slot="prefix" name="arrow-repeat"></sl-icon> Ranking
+          <sl-icon slot="prefix" name="arrow-repeat"></sl-icon> <span data-i18n="webapp_ranking">Ranking</span>
         </sl-button>
       </div>
     </div>
 
     <!-- Gaveta (Drawer) para Temporadas -->
-    <sl-drawer id="gavetaTemporada" label="Selecione a Temporada" placement="start">
+    <sl-drawer id="gavetaTemporada" label="Selecione a Temporada" data-i18n-label="webapp_select_season" placement="start">
       <div id="containerBotoesTemporada" style="display: flex; flex-direction: column; gap: 8px;">
         <!-- Botões gerados via JS -->
       </div>
@@ -138,7 +147,7 @@
         </div>
         <div class="back" style="align-items: flex-start; flex-direction: column; justify-content: flex-start; padding: 15px; box-sizing: border-box;">
           <div style="display: flex; justify-content: center; align-items: center; width: 100%; position: relative; margin-top: 0; margin-bottom: 15px;">
-            <h2 style="margin: 0; text-align: center;">🏆 Ranking Oficial</h2>
+            <h2 style="margin: 0; text-align: center;" data-i18n="webapp_official_ranking">🏆 Ranking Oficial</h2>
             <sl-icon-button id="btnToggleRankingScoresMobile" name="eye" class="mobile-only-btn" style="position: absolute; right: 0; font-size: 20px; color: #a4b1cd;"></sl-icon-button>
           </div>
           <div id="rankingContainer" style="width: 100%; display: flex; flex-direction: column; gap: 6px;"></div>
@@ -292,6 +301,7 @@
     }
   </style>
 
+  <script src="i18n-web.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

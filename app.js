@@ -13,7 +13,10 @@ const dataContainer = document.getElementById('dataContainer');
 const jsonOutput = document.getElementById('jsonOutput');
 
 // Inicializa a biblioteca do Google Identity
-window.onload = function () {
+window.onload = async function () {
+  await window.I18n.init();
+  window.I18n.translatePage();
+
   const savedToken = localStorage.getItem('googleToken');
   const tokenExp = localStorage.getItem('googleTokenExp');
   
@@ -29,7 +32,7 @@ window.onload = function () {
       const badgeSyncStatus = document.getElementById('badgeSyncStatus');
       const syncContainer = document.getElementById('syncStatusContainer');
       badgeSyncStatus.setAttribute('variant', 'warning');
-      badgeSyncStatus.innerText = 'Verificando atualizações...';
+      badgeSyncStatus.innerText = globalThis.I18n.t("webapp_checking_updates") || "Verificando atualizações...";
       syncContainer.style.borderLeftColor = '#ff9800';
       
       window.isCachedLoaded = true;
@@ -189,7 +192,7 @@ function processarConteudo(jsonData, modifiedTime) {
     
     // Como a verificação com o Google Drive acabou de acontecer, o dado sempre está atualizado com a nuvem
     badgeSyncStatus.setAttribute('variant', 'success');
-    badgeSyncStatus.innerText = 'Atualizado com a Nuvem';
+    badgeSyncStatus.innerText = globalThis.I18n.t("webapp_synced_cloud") || "Atualizado com a Nuvem";
     syncContainer.style.borderLeftColor = '#4CAF50';
     
     // Aplicar Cores Customizadas
@@ -211,7 +214,14 @@ function processarConteudo(jsonData, modifiedTime) {
     window.__ANISCHED_DATA = jsonData;
     window.__CONFIG_STREAMING = (jsonData.configuracoesUser && jsonData.configuracoesUser.streamingPrefs) 
       ? jsonData.configuracoesUser.streamingPrefs 
-      : { hierarquia: ["Crunchyroll", "Netflix", "Amazon Prime Video", "HIDIVE", "Bilibili TV", "Hulu", "Disney Plus", "YouTube", "Abema"], ignorados: [], manualLinks: {} };
+      : { hierarquia: ["Crunchyroll", "Netflix", "Amazon Prime Video", "HIDIVE", "Bilibili TV", "Hulu", "Disney Plus", "YouTube", "Abema", "OceanVeil", "OceanVeil (Unedited)"], ignorados: [], manualLinks: {} };
+      
+    const TODOS_STREAMINGS = ["Crunchyroll", "Netflix", "Amazon Prime Video", "HIDIVE", "Bilibili TV", "Hulu", "Disney Plus", "YouTube", "Abema", "OceanVeil", "OceanVeil (Unedited)"];
+    TODOS_STREAMINGS.forEach(s => {
+      if (!window.__CONFIG_STREAMING.hierarquia.includes(s) && !window.__CONFIG_STREAMING.ignorados.includes(s)) {
+        window.__CONFIG_STREAMING.hierarquia.push(s);
+      }
+    });
     
     prepararSeletorTemporadas(jsonData);
 
@@ -230,7 +240,9 @@ const STREAMING_BADGES = {
   "Hulu": { code: "HL", color: "#1CE783" },
   "Disney Plus": { code: "DP", color: "#113CCF" },
   "YouTube": { code: "YT", color: "#FF0000" },
-  "Abema": { code: "AB", color: "#33AA22" }
+  "Abema": { code: "AB", color: "#33AA22" },
+  "OceanVeil": { code: "OV", color: "#00a2a5" },
+  "OceanVeil (Unedited)": { code: "OV", color: "#00a2a5" }
 };
 
 const ABREV_DIAS = {
@@ -239,7 +251,7 @@ const ABREV_DIAS = {
 };
 
 function obterMelhorStreaming(anime, configObj) {
-  if (!configObj) configObj = { hierarquia: ["Crunchyroll", "Netflix", "Amazon Prime Video", "HIDIVE", "Bilibili TV", "Hulu", "Disney Plus", "YouTube", "Abema"], ignorados: [], manualLinks: {} };
+  if (!configObj) configObj = { hierarquia: ["Crunchyroll", "Netflix", "Amazon Prime Video", "HIDIVE", "Bilibili TV", "Hulu", "Disney Plus", "YouTube", "Abema", "OceanVeil", "OceanVeil (Unedited)"], ignorados: [], manualLinks: {} };
   
   const animeIdKey = anime.id_anilist ? `ani_${anime.id_anilist}` : `mal_${anime.id_mal}`;
   const linkOverride = configObj.manualLinks[animeIdKey];
@@ -300,7 +312,7 @@ function criarElementoBadgeStreamingHtml(anime) {
     
     textColor = getContrastYIQ(bgColor);
     badgeCode = configBadge.code;
-    tooltipSite = bestStream.site + (isManual ? " (Personalizado/Manual)" : "");
+    tooltipSite = (globalThis.I18n.t("tooltip_watch_on") || "Assistir no {0}").replace("{0}", bestStream.site) + (isManual ? (globalThis.I18n.t("tooltip_manual_stream") || " (Personalizado/Manual)") : "");
     clickActionUrl = bestStream.url;
   }
 
@@ -435,10 +447,10 @@ function prepararSeletorTemporadas(dados) {
         
         let icone = "";
         let mes = "";
-        if(sLower === "spring") { icone = "🌸 "; mes = "Abril"; }
-        if(sLower === "winter") { icone = "❄️ "; mes = "Janeiro"; }
-        if(sLower === "summer") { icone = "☀️ "; mes = "Julho"; }
-        if(sLower === "fall") { icone = "🍂 "; mes = "Outubro"; }
+        if(sLower === "spring") { icone = "🌸 "; mes = globalThis.I18n.t("month_apr") || "Abril"; }
+        if(sLower === "winter") { icone = "❄️ "; mes = globalThis.I18n.t("month_jan") || "Janeiro"; }
+        if(sLower === "summer") { icone = "☀️ "; mes = globalThis.I18n.t("month_jul") || "Julho"; }
+        if(sLower === "fall") { icone = "🍂 "; mes = globalThis.I18n.t("month_oct") || "Outubro"; }
 
         let badgeVariant = varianteCor;
         if (temp.id === tempAtivaId) {
@@ -485,10 +497,10 @@ function prepararSeletorTemporadas(dados) {
   const [sA, yA] = temporadaInicial.split('_');
   const sLowerAtiva = sA.toLowerCase();
   let mesMain = "";
-  if(sLowerAtiva === "spring") mesMain = "Abril";
-  if(sLowerAtiva === "winter") mesMain = "Janeiro";
-  if(sLowerAtiva === "summer") mesMain = "Julho";
-  if(sLowerAtiva === "fall") mesMain = "Outubro";
+  if(sLowerAtiva === "spring") mesMain = globalThis.I18n.t("month_apr") || "Abril";
+  if(sLowerAtiva === "winter") mesMain = globalThis.I18n.t("month_jan") || "Janeiro";
+  if(sLowerAtiva === "summer") mesMain = globalThis.I18n.t("month_jul") || "Julho";
+  if(sLowerAtiva === "fall") mesMain = globalThis.I18n.t("month_oct") || "Outubro";
   
   btnAbrirGaveta.innerHTML = `<sl-icon slot="prefix" name="calendar3"></sl-icon> ${capitalizar(sA)} ${yA} <span slot="suffix" style="display: flex; align-items: center; margin-left: 8px;"><sl-badge variant="neutral" style="font-size: 10px;">${mesMain}</sl-badge></span>`;
   
@@ -520,14 +532,14 @@ function renderizarCronogramaDaTemporada(temporada, dados) {
   const dicionarioAnimes = dados.mapaDeIds || {};
   
   const DIAS_SEMANA = [
-    { id: 'segunda', nome: 'Segunda-Feira', cor: 'bg-azul' },
-    { id: 'terca',   nome: 'Terça-Feira',   cor: 'bg-verde' },
-    { id: 'quarta',  nome: 'Quarta-Feira',  cor: 'bg-azul' },
-    { id: 'quinta',  nome: 'Quinta-Feira',  cor: 'bg-verde' },
-    { id: 'sexta',   nome: 'Sexta-Feira',   cor: 'bg-azul' },
-    { id: 'sabado',  nome: 'Sábado',        cor: 'bg-verde' },
-    { id: 'domingo', nome: 'Domingo',       cor: 'bg-azul' },
-      { id: 'extra',   nome: 'Sem dia fixo',    cor: 'bg-cinza' }
+    { id: 'segunda', nome: globalThis.I18n.t('day_mon_full') || 'Segunda-Feira', cor: 'bg-azul' },
+    { id: 'terca', nome: globalThis.I18n.t('day_tue_full') || 'Terça-Feira', cor: 'bg-verde' },
+    { id: 'quarta', nome: globalThis.I18n.t('day_wed_full') || 'Quarta-Feira', cor: 'bg-azul' },
+    { id: 'quinta', nome: globalThis.I18n.t('day_thu_full') || 'Quinta-Feira', cor: 'bg-verde' },
+    { id: 'sexta', nome: globalThis.I18n.t('day_fri_full') || 'Sexta-Feira', cor: 'bg-azul' },
+    { id: 'sabado', nome: globalThis.I18n.t('day_sat_full') || 'Sábado', cor: 'bg-verde' },
+    { id: 'domingo', nome: globalThis.I18n.t('day_sun_full') || 'Domingo', cor: 'bg-azul' },
+      { id: 'extra', nome: globalThis.I18n.t('day_ext_full') || 'Sem dia fixo', cor: 'bg-cinza' }
   ];
   
   let animesEncontrados = false;
@@ -607,14 +619,14 @@ function renderizarCronogramaDaTemporada(temporada, dados) {
       
       if (anime.id_mal) {
         botoesHtml += `
-          <a href="https://myanimelist.net/anime/${anime.id_mal}" target="_blank" title="Abrir MAL" class="badge-agenda" style="${estiloAtalho}">
+          <a href="https://myanimelist.net/anime/${anime.id_mal}" target="_blank" title="${(globalThis.I18n.t('tooltip_open_with') || 'Abrir {0}').replace('{0}', 'MAL')}" class="badge-agenda" style="${estiloAtalho}">
             <img src="https://myanimelist.net/favicon.ico" width="14" height="14" style="display:block; border-radius:2px;">
           </a>
         `;
       }
       if (anime.id_anilist) {
         botoesHtml += `
-          <a href="https://anilist.co/anime/${anime.id_anilist}" target="_blank" title="Abrir AniList" class="badge-agenda" style="${estiloAtalho}">
+          <a href="https://anilist.co/anime/${anime.id_anilist}" target="_blank" title="${(globalThis.I18n.t('tooltip_open_with') || 'Abrir {0}').replace('{0}', 'AniList')}" class="badge-agenda" style="${estiloAtalho}">
             <img src="https://anilist.co/img/icons/favicon-32x32.png" width="14" height="14" style="display:block; border-radius:2px;">
           </a>
         `;
@@ -740,14 +752,14 @@ function renderizarRankingDaTemporada(temporada, dados) {
     const estiloBadgeBase = "display: inline-flex; align-items: center; justify-content: center; padding: 2px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; gap: 4px; min-width: 42px; font-variant-numeric: tabular-nums;";
     
     const badgeMAL = `
-      <a href="${anime.id_mal ? 'https://myanimelist.net/anime/' + anime.id_mal : '#'}" target="_blank" style="${estiloBadgeBase} background-color: #2e51a2; color: #fff; border: 1px solid #1c336b; text-decoration: none; cursor: pointer;" title="Ver no MyAnimeList">
+      <a href="${anime.id_mal ? 'https://myanimelist.net/anime/' + anime.id_mal : '#'}" target="_blank" style="${estiloBadgeBase} background-color: #2e51a2; color: #fff; border: 1px solid #1c336b; text-decoration: none; cursor: pointer;" title="${(globalThis.I18n.t('tooltip_open_with') || 'Abrir {0}').replace('{0}', 'MyAnimeList')}">
         <img src="https://myanimelist.net/favicon.ico" width="12" height="12" style="border-radius: 2px;">
         ${notaMAL}
       </a>
     `;
     
     const badgeAL = `
-      <a href="${anime.id_anilist ? 'https://anilist.co/anime/' + anime.id_anilist : '#'}" target="_blank" style="${estiloBadgeBase} background-color: #1a1a24; color: #fff; border: 1px solid #333; text-decoration: none; cursor: pointer;" title="Ver no AniList">
+      <a href="${anime.id_anilist ? 'https://anilist.co/anime/' + anime.id_anilist : '#'}" target="_blank" style="${estiloBadgeBase} background-color: #1a1a24; color: #fff; border: 1px solid #333; text-decoration: none; cursor: pointer;" title="${(globalThis.I18n.t('tooltip_open_with') || 'Abrir {0}').replace('{0}', 'AniList')}">
         <img src="https://anilist.co/img/icons/favicon-32x32.png" width="12" height="12" style="border-radius: 2px;">
         ${notaAL}
       </a>
@@ -866,7 +878,7 @@ function renderizarListaEstreias(temporada, dados) {
   });
   
   const tituloSecao = document.createElement('h2');
-  tituloSecao.innerText = '📅 Próximas Estreias';
+  tituloSecao.innerText = "🗓️ " + (globalThis.I18n.t("webapp_premiere") || "Próximas Estreias");
   tituloSecao.style.textAlign = 'center';
   tituloSecao.style.marginTop = '25px';
   tituloSecao.style.marginBottom = '20px';
@@ -905,7 +917,7 @@ function renderizarListaEstreias(temporada, dados) {
     if (data === todayStr) {
       header.style.backgroundColor = '#e53e3e'; // Different color for today
       header.style.color = '#fff';
-      header.innerHTML = `<sl-icon name="calendar-date"></sl-icon> ${data} (Hoje)`;
+      header.innerHTML = `<sl-icon name="calendar-date"></sl-icon> ${(globalThis.I18n.t("webapp_today") || "{0} (Hoje)").replace("{0}", data)}`;
     } else {
       header.style.backgroundColor = 'var(--cor-agenda-1, #4c6ef5)';
       header.style.color = 'var(--text-agenda-1, #fff)';
