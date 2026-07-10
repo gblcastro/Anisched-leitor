@@ -418,7 +418,7 @@ function prepararSeletorTemporadas(dados) {
       const anoTitle = document.createElement("div");
       anoTitle.style.fontWeight = "bold";
       anoTitle.style.fontSize = "18px";
-      anoTitle.style.color = "#aaa";
+      anoTitle.style.color = "var(--text-muted)";
       anoTitle.style.borderBottom = "1px solid #ccc";
       anoTitle.style.paddingBottom = "5px";
       anoTitle.style.marginBottom = "10px";

@@ -7,6 +7,7 @@
   
   
   <!-- Usando o CDN do Shoelace temporariamente para o esqueleto -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/dark.css" />
   <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace.js"></script>
 
@@ -14,18 +15,34 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
+    :root {
+      --bg-main: #e2e6eb;
+      --text-main: #333333;
+      --bg-nav: #f0f2f5;
+      --border-color: #dddddd;
+      --bg-card: #f0f2f5;
+      --border-card: #cccccc;
+    }
+    html.sl-theme-dark {
+      --bg-main: #121212;
+      --text-main: #e0e0e0;
+      --bg-nav: #0d0d0d;
+      --border-color: #2a2a2a;
+      --bg-card: #1a2333;
+      --border-card: #2b4570;
+    }
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
       padding: 0;
-      background-color: #121212;
-      color: #e0e0e0;
+      background-color: var(--bg-main);
+      color: var(--text-main);
     }
     .header {
-      background-color: #0d0d0d;
+      background-color: var(--bg-nav);
       padding: 15px;
       text-align: center;
-      border-bottom: 1px solid #2a2a2a;
+      border-bottom: 1px solid var(--border-color);
     }
     .container {
       padding: 20px;
@@ -35,8 +52,8 @@
     .status-box {
       margin-top: 20px;
       padding: 15px;
-      background-color: #1a2333;
-      border: 1px solid #2b4570;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-card);
       border-radius: 8px;
     }
     pre {
@@ -78,19 +95,23 @@
         color: var(--text-agenda-cinza, #e0e0e0);
       }
   </style>
+  <script src="theme-web.js"></script>
 </head>
 <body>
   <div class="header" style="display: flex; justify-content: space-between; align-items: center;">
     <h2 style="margin: 0; color: #4CAF50;"><sl-icon name="display"></sl-icon> <span data-i18n="webapp_title">AniSched Leitor</span></h2>
-    <sl-dropdown>
-      <sl-button slot="trigger" variant="text" style="color: #fff; font-size: 1.5rem;">
-        <sl-icon name="translate" label="Language"></sl-icon>
-      </sl-button>
-      <sl-menu>
-        <sl-menu-item id="menu-lang-pt-BR" value="pt-BR" onclick="globalThis.I18n.setLanguage('pt-BR')">Português (BR)</sl-menu-item>
-        <sl-menu-item id="menu-lang-en-US" value="en-US" onclick="globalThis.I18n.setLanguage('en-US')">English (US)</sl-menu-item>
-      </sl-menu>
-    </sl-dropdown>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <sl-dropdown>
+        <sl-button slot="trigger" variant="text" style="color: var(--text-main); font-size: 1.5rem;">
+          <sl-icon name="translate" label="Language"></sl-icon>
+        </sl-button>
+        <sl-menu>
+          <sl-menu-item id="menu-lang-pt-BR" value="pt-BR" onclick="globalThis.I18n.setLanguage('pt-BR')">Português (BR)</sl-menu-item>
+          <sl-menu-item id="menu-lang-en-US" value="en-US" onclick="globalThis.I18n.setLanguage('en-US')">English (US)</sl-menu-item>
+        </sl-menu>
+      </sl-dropdown>
+      <sl-icon-button id="btnThemeToggle" name="moon" style="font-size: 1.5rem; color: var(--text-main);"></sl-icon-button>
+    </div>
   </div>
 
   <div class="container">
@@ -110,7 +131,7 @@
       <p id="lblStatus" style="margin-bottom: 0;"><span data-i18n="webapp_waiting_login">Aguardando login...</span></p>
     </div>
 
-    <div id="syncStatusContainer" style="display: none; background-color: #1a2333; padding: 10px 15px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #4CAF50;">
+    <div id="syncStatusContainer" style="display: none; background-color: var(--bg-card); padding: 10px 15px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #4CAF50;">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
         <div>
           <strong data-i18n="webapp_synced">Sincronizado:</strong> <span id="lblSyncDate">-</span>
@@ -231,8 +252,8 @@
     }
     .back {
       transform: rotateY(180deg);
-      background-color: #1a1b26;
-      border: 1px solid #2d2e3d;
+      background-color: var(--bg-card, #1a1b26);
+      border: 1px solid var(--border-card, #2d2e3d);
       border-radius: 8px;
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
     }
@@ -264,6 +285,7 @@
       justify-content: center;
       padding-left: 4px;
       padding-right: 4px;
+      border: 1px solid #000 !important;
     }
     
     #scheduleContainer {
