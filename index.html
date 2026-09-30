@@ -110,27 +110,131 @@
         background-color: var(--cor-agenda-cinza, #313338);
         color: var(--text-agenda-cinza, #e0e0e0);
       }
+
+    /* Estilos da Planilha Avançada */
+    .spreadsheet-row {
+      transition: background 0.15s ease;
+      border-bottom: 1px solid var(--border-card, rgba(255, 255, 255, 0.08));
+    }
+    .spreadsheet-row:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .spreadsheet-cell {
+      padding: 10px 12px;
+      vertical-align: middle;
+    }
+    .tag-genre-chip {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text-main);
+      margin: 2px 3px 2px 0;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .tag-genre-chip:hover {
+      background: rgba(76, 175, 80, 0.25);
+      color: #4CAF50;
+    }
+    .btn-action-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-main);
+      text-decoration: none;
+      transition: transform 0.15s, background 0.15s;
+    }
+    .btn-action-icon:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.15);
+    }
+    .badge-score-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 13px;
+      min-width: 32px;
+    }
+    .score-perfect {
+      background: linear-gradient(135deg, #a855f7, #6366f1);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(168, 85, 247, 0.4);
+    }
+    .score-high {
+      background: #10b981;
+      color: #ffffff;
+    }
+    .score-good {
+      background: #3b82f6;
+      color: #ffffff;
+    }
+    .score-regular {
+      background: #f59e0b;
+      color: #ffffff;
+    }
+    .score-low {
+      background: #64748b;
+      color: #ffffff;
+    }
+    .score-none {
+      background: rgba(255, 255, 255, 0.08);
+      color: #888;
+    }
+    th[data-sort] {
+      transition: background 0.2s;
+    }
+    th[data-sort]:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .sort-icon {
+      font-size: 10px;
+      margin-left: 4px;
+      opacity: 0.7;
+    }
   </style>
   <script src="theme-web.js"></script>
 </head>
 <body>
-  <div class="header" style="display: flex; justify-content: space-between; align-items: center;">
-    <h2 style="margin: 0; color: #4CAF50;"><sl-icon name="display"></sl-icon> <span data-i18n="webapp_title">AniSched Leitor</span></h2>
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <sl-dropdown>
-        <sl-button slot="trigger" variant="text" style="color: var(--text-main); font-size: 1.5rem;">
-          <sl-icon name="translate" label="Language"></sl-icon>
-        </sl-button>
-        <sl-menu>
-          <sl-menu-item id="menu-lang-pt-BR" value="pt-BR" onclick="globalThis.I18n.setLanguage('pt-BR')">Português (BR)</sl-menu-item>
-          <sl-menu-item id="menu-lang-en-US" value="en-US" onclick="globalThis.I18n.setLanguage('en-US')">English (US)</sl-menu-item>
-        </sl-menu>
-      </sl-dropdown>
-      <sl-icon-button id="btnThemeToggle" name="moon" style="font-size: 1.5rem; color: var(--text-main);"></sl-icon-button>
+  <div class="header">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h2 style="margin: 0; color: #4CAF50;"><sl-icon name="display"></sl-icon> <span data-i18n="webapp_title">AniSched Leitor</span></h2>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <sl-dropdown>
+          <sl-button slot="trigger" variant="text" style="color: var(--text-main); font-size: 1.5rem;">
+            <sl-icon name="translate" label="Language"></sl-icon>
+          </sl-button>
+          <sl-menu>
+            <sl-menu-item id="menu-lang-pt-BR" value="pt-BR" onclick="globalThis.I18n.setLanguage('pt-BR')">Português (BR)</sl-menu-item>
+            <sl-menu-item id="menu-lang-en-US" value="en-US" onclick="globalThis.I18n.setLanguage('en-US')">English (US)</sl-menu-item>
+          </sl-menu>
+        </sl-dropdown>
+        <sl-icon-button id="btnThemeToggle" name="moon" style="font-size: 1.5rem; color: var(--text-main);"></sl-icon-button>
+      </div>
+    </div>
+
+    <!-- Navegação em Abas no Cabeçalho -->
+    <div class="nav-tabs-wrapper" style="display: flex; justify-content: center; gap: 10px; margin-top: 14px;">
+      <sl-button id="tabBtnAgenda" size="small" variant="primary" pill>
+        <sl-icon slot="prefix" name="calendar-week"></sl-icon>
+        <span data-i18n="nav_agenda">Agenda</span>
+      </sl-button>
+      <sl-button id="tabBtnRankings" size="small" variant="default" pill>
+        <sl-icon slot="prefix" name="table"></sl-icon>
+        <span data-i18n="nav_rankings">Planilha de Rankings</span>
+      </sl-button>
     </div>
   </div>
 
-  <div class="container">
+  <div id="viewAgenda" class="container">
     <p data-i18n="webapp_connect_google">Conecte-se com a sua conta do Google para visualizar o cronograma sincronizado.</p>
     
     <div style="text-align: center; margin-top: 30px;">
@@ -191,7 +295,147 @@
         </div>
       </div>
     </div>
-  </main>
+  </div>
+
+  <!-- ABA 2: PLANILHA DE RANKINGS (EXCEL-LIKE) -->
+  <div id="viewRankings" style="display: none; padding: 20px 15px; max-width: 1300px; margin: 0 auto; box-sizing: border-box;">
+    <!-- Header da Planilha -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+      <div>
+        <h2 style="margin: 0; color: #4CAF50; display: flex; align-items: center; gap: 8px;">
+          <sl-icon name="table"></sl-icon> <span data-i18n="spreadsheet_title">Planilha de Rankings</span>
+        </h2>
+        <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted, #888);" data-i18n="spreadsheet_subtitle">
+          Todos os animes avaliados em todas as temporadas em uma única lista interativa.
+        </p>
+      </div>
+
+      <!-- Resumo / Métricas Rápidas -->
+      <div id="spreadsheetStatsBar" style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <div class="stat-badge-card" style="background: var(--bg-card); border: 1px solid var(--border-card); padding: 8px 14px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600;" data-i18n="spreadsheet_total">Total Obras</div>
+          <div id="statTotalObras" style="font-size: 18px; font-weight: bold; color: #4da3ff;">0</div>
+        </div>
+        <div class="stat-badge-card" style="background: var(--bg-card); border: 1px solid var(--border-card); padding: 8px 14px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600;" data-i18n="spreadsheet_avg_score">Média Pessoal</div>
+          <div id="statMediaNotas" style="font-size: 18px; font-weight: bold; color: #a855f7;">--</div>
+        </div>
+        <div class="stat-badge-card" style="background: var(--bg-card); border: 1px solid var(--border-card); padding: 8px 14px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600;" data-i18n="spreadsheet_seasons_count">Temporadas</div>
+          <div id="statTotalTemporadas" style="font-size: 18px; font-weight: bold; color: #10b981;">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Estado: Carregando -->
+    <div id="spreadsheetLoading" style="display: none; text-align: center; padding: 40px 0;">
+      <sl-spinner style="font-size: 2.5rem; --indicator-color: #4CAF50;"></sl-spinner>
+      <p style="margin-top: 15px; color: var(--text-muted); font-size: 14px;" data-i18n="spreadsheet_loading">Carregando planilha de rankings do Google Drive...</p>
+    </div>
+
+    <!-- Estado: Input Manual de ID (caso o usuário abra a aba sem parâmetro na URL) -->
+    <div id="spreadsheetInputPrompt" style="display: none; background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 10px; padding: 25px; max-width: 600px; margin: 30px auto; text-align: center;">
+      <sl-icon name="cloud-download" style="font-size: 40px; color: #00A1D6; margin-bottom: 12px;"></sl-icon>
+      <p style="font-size: 14px; color: var(--text-main); margin-bottom: 18px;" data-i18n="spreadsheet_prompt_id">
+        Nenhum ID de ranking fornecido na URL. Abra o link gerado pela extensão ou insira o ID abaixo:
+      </p>
+      <div style="display: flex; gap: 8px; justify-content: center; align-items: center; max-width: 450px; margin: 0 auto;">
+        <sl-input id="inputManualRankingId" placeholder="ID do Arquivo no Google Drive..." size="small" style="flex: 1;"></sl-input>
+        <sl-button id="btnCarregarManualId" variant="primary" size="small" data-i18n="btn_load">Carregar</sl-button>
+      </div>
+    </div>
+
+    <!-- Container Principal da Planilha e Filtros -->
+    <div id="spreadsheetContent" style="display: none;">
+      <!-- Barra de Filtros Avançados (Estilo Excel Toolbar) -->
+      <div class="spreadsheet-toolbar" style="background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+          <!-- Busca Textual -->
+          <sl-input id="filtroTexto" placeholder="Buscar por título ou estúdio..." data-i18n-placeholder="spreadsheet_search_placeholder" size="small" clearable style="flex: 2; min-width: 200px;">
+            <sl-icon slot="prefix" name="search"></sl-icon>
+          </sl-input>
+
+          <!-- Filtro Temporada -->
+          <sl-select id="filtroTemporada" size="small" value="todas" hoist style="flex: 1; min-width: 170px;">
+            <sl-option value="todas" data-i18n="spreadsheet_season_filter">Todas as Temporadas</sl-option>
+          </sl-select>
+
+          <!-- Filtro Gênero -->
+          <sl-select id="filtroGenero" size="small" value="todos" hoist style="flex: 1; min-width: 160px;">
+            <sl-option value="todos" data-i18n="spreadsheet_genre_filter">Todos os Gêneros</sl-option>
+          </sl-select>
+
+          <!-- Filtro Nota Pessoal -->
+          <sl-select id="filtroNota" size="small" value="todas" hoist style="flex: 1; min-width: 150px;">
+            <sl-option value="todas">Nota: Todas</sl-option>
+            <sl-option value="10">Nota: 10</sl-option>
+            <sl-option value="9">Nota: 9+</sl-option>
+            <sl-option value="8">Nota: 8+</sl-option>
+            <sl-option value="7">Nota: 7+</sl-option>
+            <sl-option value="com_nota">Com Nota Pessoal</sl-option>
+            <sl-option value="sem_nota">Sem Nota</sl-option>
+          </sl-select>
+
+          <!-- Filtro Streaming -->
+          <sl-select id="filtroStreaming" size="small" value="todos" hoist style="flex: 1; min-width: 160px;">
+            <sl-option value="todos">Streaming: Todos</sl-option>
+          </sl-select>
+
+          <!-- Botão Limpar Filtros -->
+          <sl-button id="btnLimparFiltros" size="small" variant="default" outline style="flex-shrink: 0;">
+            <sl-icon slot="prefix" name="funnel"></sl-icon>
+            <span data-i18n="spreadsheet_clear_filters">Limpar Filtros</span>
+          </sl-button>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-muted); padding-top: 4px; border-top: 1px solid var(--border-color, rgba(255,255,255,0.06));">
+          <span id="lblContadorObras">Exibindo 0 de 0 obras</span>
+          <span id="lblOrdenacaoAtiva" style="font-style: italic;">Ordenado por: Nota Pessoal (Maior para Menor)</span>
+        </div>
+      </div>
+
+      <!-- Tabela / DataGrid Avançado -->
+      <div class="spreadsheet-table-wrapper" style="overflow-x: auto; background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 10px; box-shadow: 0 4px 14px rgba(0,0,0,0.15);">
+        <table id="tabelaRankings" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+          <thead>
+            <tr style="background: rgba(0, 0, 0, 0.25); border-bottom: 2px solid var(--border-card); user-select: none;">
+              <th data-sort="rank_geral" style="padding: 12px 10px; text-align: center; width: 60px; cursor: pointer;">
+                # <span class="sort-icon"></span>
+              </th>
+              <th data-sort="titulo" style="padding: 12px 14px; cursor: pointer; min-width: 240px;">
+                <span data-i18n="spreadsheet_col_anime">Obra</span> <span class="sort-icon"></span>
+              </th>
+              <th data-sort="temporada" style="padding: 12px 10px; cursor: pointer; width: 150px;">
+                <span data-i18n="spreadsheet_col_season">Temporada</span> <span class="sort-icon"></span>
+              </th>
+              <th data-sort="nota_pessoal" style="padding: 12px 10px; text-align: center; cursor: pointer; width: 105px;">
+                <span data-i18n="spreadsheet_col_my_score">Sua Nota</span> <span class="sort-icon">▼</span>
+              </th>
+              <th data-sort="nota_publica" style="padding: 12px 10px; text-align: center; cursor: pointer; width: 140px;">
+                <span data-i18n="spreadsheet_col_public_scores">Notas Públicas</span> <span class="sort-icon"></span>
+              </th>
+              <th style="padding: 12px 10px; min-width: 180px;">
+                <span data-i18n="spreadsheet_col_genres">Gêneros</span>
+              </th>
+              <th data-sort="episodios" style="padding: 12px 10px; text-align: center; cursor: pointer; width: 95px;">
+                <span data-i18n="spreadsheet_col_status">Status</span> <span class="sort-icon"></span>
+              </th>
+              <th style="padding: 12px 14px; text-align: center; width: 150px;">
+                <span data-i18n="spreadsheet_col_links">Onde Assistir / Links</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="corpoTabelaRankings">
+            <!-- Linhas preenchidas via JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div id="spreadsheetEmptyMsg" style="display: none; text-align: center; padding: 40px 20px; color: var(--text-muted); font-style: italic;" data-i18n="spreadsheet_no_data">
+        Nenhum anime encontrado com os filtros selecionados.
+      </div>
+    </div>
+  </div>
 
   <style>
     /* Estilos copiados do Dashboard Original */

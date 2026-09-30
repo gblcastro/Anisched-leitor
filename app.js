@@ -16,6 +16,7 @@ const jsonOutput = document.getElementById('jsonOutput');
 window.onload = async function () {
   await window.I18n.init();
   window.I18n.translatePage();
+  inicializarAbasENavegacao();
 
   const savedToken = localStorage.getItem('googleToken');
   const tokenExp = localStorage.getItem('googleTokenExp');
@@ -1007,3 +1008,547 @@ window.togglePremiereColor = function(el, animeId) {
   
   localStorage.setItem("estreiasDestacadas", JSON.stringify(destacados));
 };
+
+// ==========================================
+// MOTOR DA PLANILHA AVANÇADA (EXCEL-LIKE)
+// ==========================================
+let rankingGlobalData = null;
+let rankingObrasFiltradas = [];
+let ordenacaoAtual = { coluna: "nota_pessoal", direcao: "desc" };
+
+function obterParametroUrl(nome) {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has(nome)) return urlParams.get(nome);
+
+  const hash = window.location.hash || "";
+  if (hash.includes("?")) {
+    const hashParams = new URLSearchParams(hash.substring(hash.indexOf("?")));
+    if (hashParams.has(nome)) return hashParams.get(nome);
+  }
+  return null;
+}
+
+function alternarAba(abaId) {
+  const tabAgenda = document.getElementById("tabBtnAgenda");
+  const tabRankings = document.getElementById("tabBtnRankings");
+  const viewAgenda = document.getElementById("viewAgenda");
+  const viewRankings = document.getElementById("viewRankings");
+
+  if (abaId === "rankings") {
+    if (tabAgenda) tabAgenda.variant = "default";
+    if (tabRankings) tabRankings.variant = "primary";
+    if (viewAgenda) viewAgenda.style.display = "none";
+    if (viewRankings) viewRankings.style.display = "block";
+
+    const idUrl = obterParametroUrl("id") || obterParametroUrl("driveId");
+    if (idUrl) {
+      carregarPlanilhaRanking(idUrl);
+    } else if (!rankingGlobalData) {
+      const ultimoId = localStorage.getItem('ultimo_ranking_id');
+      if (ultimoId) {
+        carregarPlanilhaRanking(ultimoId);
+      } else {
+        const promptEl = document.getElementById("spreadsheetInputPrompt");
+        const loadingEl = document.getElementById("spreadsheetLoading");
+        const contentEl = document.getElementById("spreadsheetContent");
+        if (promptEl) promptEl.style.display = "block";
+        if (loadingEl) loadingEl.style.display = "none";
+        if (contentEl) contentEl.style.display = "none";
+      }
+    }
+  } else {
+    if (tabAgenda) tabAgenda.variant = "primary";
+    if (tabRankings) tabRankings.variant = "default";
+    if (viewAgenda) viewAgenda.style.display = "block";
+    if (viewRankings) viewRankings.style.display = "none";
+  }
+}
+
+function inicializarAbasENavegacao() {
+  const tabAgenda = document.getElementById("tabBtnAgenda");
+  const tabRankings = document.getElementById("tabBtnRankings");
+
+  if (tabAgenda) {
+    tabAgenda.addEventListener("click", () => {
+      alternarAba("agenda");
+      window.location.hash = "#/agenda";
+    });
+  }
+
+  if (tabRankings) {
+    tabRankings.addEventListener("click", () => {
+      alternarAba("rankings");
+      const idUrl = obterParametroUrl("id") || obterParametroUrl("driveId") || localStorage.getItem('ultimo_ranking_id') || "";
+      window.location.hash = idUrl ? `#/rankings?id=${idUrl}` : `#/rankings`;
+    });
+  }
+
+  const idUrl = obterParametroUrl("id") || obterParametroUrl("driveId");
+  const hash = window.location.hash || "";
+  if (idUrl || hash.startsWith("#/rankings")) {
+    alternarAba("rankings");
+  }
+
+  window.addEventListener("hashchange", () => {
+    const h = window.location.hash || "";
+    if (h.startsWith("#/rankings")) {
+      alternarAba("rankings");
+    } else if (h.startsWith("#/agenda")) {
+      alternarAba("agenda");
+    }
+  });
+
+  configurarEventosPlanilha();
+}
+
+async function carregarPlanilhaRanking(fileId) {
+  if (!fileId) return;
+
+  const loadingEl = document.getElementById("spreadsheetLoading");
+  const contentEl = document.getElementById("spreadsheetContent");
+  const promptEl = document.getElementById("spreadsheetInputPrompt");
+
+  if (loadingEl) loadingEl.style.display = "block";
+  if (contentEl) contentEl.style.display = "none";
+  if (promptEl) promptEl.style.display = "none";
+
+  const cacheKey = `cached_ranking_${fileId}`;
+  const cachedDataStr = localStorage.getItem(cacheKey);
+  if (cachedDataStr) {
+    try {
+      const parsed = JSON.parse(cachedDataStr);
+      rankingGlobalData = parsed;
+      renderizarPlanilha(parsed);
+    } catch(e) {}
+  }
+
+  try {
+    let jsonBaixado = null;
+
+    if (accessToken) {
+      try {
+        const respDrive = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        if (respDrive.ok) {
+          jsonBaixado = await respDrive.json();
+        }
+      } catch(eDrive) {
+        console.warn("Fetch direto com token falhou, tentando relays públicos:", eDrive);
+      }
+    }
+
+    if (!jsonBaixado) {
+      const downloadDriveUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+      const proxyEndpoints = [
+        `https://corsproxy.io/?url=${encodeURIComponent(downloadDriveUrl)}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(downloadDriveUrl)}`,
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(downloadDriveUrl)}`
+      ];
+
+      for (const pUrl of proxyEndpoints) {
+        try {
+          const resp = await fetch(pUrl);
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data && Array.isArray(data.animes)) {
+              jsonBaixado = data;
+              break;
+            }
+          }
+        } catch(eProxy) {
+          console.warn(`Proxy ${pUrl} falhou, tentando próximo relay...`);
+        }
+      }
+    }
+
+    if (!jsonBaixado || !Array.isArray(jsonBaixado.animes)) {
+      throw new Error("Não foi possível carregar os dados do arquivo de ranking público.");
+    }
+
+    localStorage.setItem(cacheKey, JSON.stringify(jsonBaixado));
+    localStorage.setItem('ultimo_ranking_id', fileId);
+
+    rankingGlobalData = jsonBaixado;
+    renderizarPlanilha(jsonBaixado);
+  } catch (erro) {
+    console.error("Erro ao carregar planilha de rankings:", erro);
+    if (!cachedDataStr) {
+      if (loadingEl) loadingEl.style.display = "none";
+      if (promptEl) promptEl.style.display = "block";
+      alert("Erro ao carregar a planilha pública do Google Drive: " + erro.message);
+    }
+  }
+}
+
+function renderizarPlanilha(dados) {
+  const loadingEl = document.getElementById("spreadsheetLoading");
+  const contentEl = document.getElementById("spreadsheetContent");
+  const promptEl = document.getElementById("spreadsheetInputPrompt");
+
+  if (loadingEl) loadingEl.style.display = "none";
+  if (promptEl) promptEl.style.display = "none";
+  if (contentEl) contentEl.style.display = "block";
+
+  const statTotal = document.getElementById("statTotalObras");
+  const statMedia = document.getElementById("statMediaNotas");
+  const statTemps = document.getElementById("statTotalTemporadas");
+
+  if (statTotal) statTotal.innerText = dados.totalObras || dados.animes.length;
+  
+  if (statMedia) {
+    const animesComNota = (dados.animes || []).filter(a => a.nota_pessoal !== null && a.nota_pessoal !== undefined);
+    if (animesComNota.length > 0) {
+      const soma = animesComNota.reduce((acc, a) => acc + a.nota_pessoal, 0);
+      statMedia.innerText = (soma / animesComNota.length).toFixed(1);
+    } else {
+      statMedia.innerText = "--";
+    }
+  }
+
+  if (statTemps) {
+    statTemps.innerText = dados.temporadas ? dados.temporadas.length : "--";
+  }
+
+  const filtroTemporada = document.getElementById("filtroTemporada");
+  if (filtroTemporada && filtroTemporada.children.length <= 1) {
+    const tempsUnicas = new Set();
+    (dados.animes || []).forEach(a => {
+      if (a.temporada_nome) tempsUnicas.add(JSON.stringify({ id: a.temporada_id, nome: a.temporada_nome }));
+    });
+    
+    Array.from(tempsUnicas).map(s => JSON.parse(s)).forEach(t => {
+      const opt = document.createElement("sl-option");
+      opt.value = t.id;
+      opt.innerText = t.nome;
+      filtroTemporada.appendChild(opt);
+    });
+  }
+
+  const filtroGenero = document.getElementById("filtroGenero");
+  if (filtroGenero && filtroGenero.children.length <= 1) {
+    const generosSet = new Set();
+    (dados.animes || []).forEach(a => {
+      (a.generos || []).forEach(g => generosSet.add(g));
+    });
+    Array.from(generosSet).sort().forEach(g => {
+      const opt = document.createElement("sl-option");
+      opt.value = g;
+      opt.innerText = g;
+      filtroGenero.appendChild(opt);
+    });
+  }
+
+  const filtroStreaming = document.getElementById("filtroStreaming");
+  if (filtroStreaming && filtroStreaming.children.length <= 1) {
+    const streamingsSet = new Set();
+    (dados.animes || []).forEach(a => {
+      if (a.streaming_nome) streamingsSet.add(a.streaming_nome);
+    });
+    Array.from(streamingsSet).sort().forEach(s => {
+      const opt = document.createElement("sl-option");
+      opt.value = s;
+      opt.innerText = s;
+      filtroStreaming.appendChild(opt);
+    });
+  }
+
+  aplicarFiltrosEOrdenacao();
+}
+
+function aplicarFiltrosEOrdenacao() {
+  if (!rankingGlobalData || !Array.isArray(rankingGlobalData.animes)) return;
+
+  const txtBusca = (document.getElementById("filtroTexto")?.value || "").toLowerCase().trim();
+  const selTemp = document.getElementById("filtroTemporada")?.value || "todas";
+  const selGen = document.getElementById("filtroGenero")?.value || "todos";
+  const selNota = document.getElementById("filtroNota")?.value || "todas";
+  const selStream = document.getElementById("filtroStreaming")?.value || "todos";
+
+  rankingObrasFiltradas = rankingGlobalData.animes.filter(a => {
+    if (txtBusca) {
+      const matchTitulo = (a.titulo || "").toLowerCase().includes(txtBusca);
+      const matchTituloEn = (a.titulo_english || "").toLowerCase().includes(txtBusca);
+      const matchEstudio = (a.estudio || "").toLowerCase().includes(txtBusca);
+      if (!matchTitulo && !matchTituloEn && !matchEstudio) return false;
+    }
+
+    if (selTemp !== "todas") {
+      if (a.temporada_id !== selTemp && a.temporada_nome !== selTemp) return false;
+    }
+
+    if (selGen !== "todos") {
+      if (!Array.isArray(a.generos) || !a.generos.includes(selGen)) return false;
+    }
+
+    if (selNota === "10") {
+      if (a.nota_pessoal !== 10) return false;
+    } else if (selNota === "9") {
+      if (a.nota_pessoal === null || a.nota_pessoal < 9) return false;
+    } else if (selNota === "8") {
+      if (a.nota_pessoal === null || a.nota_pessoal < 8) return false;
+    } else if (selNota === "7") {
+      if (a.nota_pessoal === null || a.nota_pessoal < 7) return false;
+    } else if (selNota === "com_nota") {
+      if (a.nota_pessoal === null || a.nota_pessoal === undefined) return false;
+    } else if (selNota === "sem_nota") {
+      if (a.nota_pessoal !== null && a.nota_pessoal !== undefined) return false;
+    }
+
+    if (selStream !== "todos") {
+      if (a.streaming_nome !== selStream) return false;
+    }
+
+    return true;
+  });
+
+  const col = ordenacaoAtual.coluna;
+  const dir = ordenacaoAtual.direcao === "asc" ? 1 : -1;
+
+  rankingObrasFiltradas.sort((a, b) => {
+    if (col === "nota_pessoal") {
+      const nA = a.nota_pessoal !== null && a.nota_pessoal !== undefined ? a.nota_pessoal : -1;
+      const nB = b.nota_pessoal !== null && b.nota_pessoal !== undefined ? b.nota_pessoal : -1;
+      if (nA !== nB) return (nA - nB) * dir;
+      const pubA = a.nota_mal || a.nota_anilist || 0;
+      const pubB = b.nota_mal || b.nota_anilist || 0;
+      if (pubA !== pubB) return pubB - pubA;
+      return (a.rank_geral || 0) - (b.rank_geral || 0);
+    }
+    if (col === "rank_geral") {
+      return ((a.rank_geral || 9999) - (b.rank_geral || 9999)) * dir;
+    }
+    if (col === "titulo") {
+      return (a.titulo || "").localeCompare(b.titulo || "") * dir;
+    }
+    if (col === "temporada") {
+      const anoA = a.ano || 0;
+      const anoB = b.ano || 0;
+      if (anoA !== anoB) return (anoA - anoB) * dir;
+      return (a.temporada_nome || "").localeCompare(b.temporada_nome || "") * dir;
+    }
+    if (col === "nota_publica") {
+      const pA = a.nota_mal || a.nota_anilist || -1;
+      const pB = b.nota_mal || b.nota_anilist || -1;
+      return (pA - pB) * dir;
+    }
+    if (col === "episodios") {
+      const epA = a.episodios || 0;
+      const epB = b.episodios || 0;
+      return (epA - epB) * dir;
+    }
+    return 0;
+  });
+
+  const lblContador = document.getElementById("lblContadorObras");
+  if (lblContador) {
+    lblContador.innerText = `Exibindo ${rankingObrasFiltradas.length} de ${rankingGlobalData.animes.length} obras`;
+  }
+
+  const lblOrd = document.getElementById("lblOrdenacaoAtiva");
+  if (lblOrd) {
+    const nomeColMap = {
+      nota_pessoal: "Sua Nota",
+      rank_geral: "Rank Geral",
+      titulo: "Título",
+      temporada: "Temporada",
+      nota_publica: "Nota Pública",
+      episodios: "Episódios"
+    };
+    lblOrd.innerText = `Ordenado por: ${nomeColMap[col] || col} (${ordenacaoAtual.direcao === "desc" ? "Maior para Menor" : "Menor para Maior"})`;
+  }
+
+  const corpo = document.getElementById("corpoTabelaRankings");
+  const msgVazio = document.getElementById("spreadsheetEmptyMsg");
+  if (!corpo) return;
+  corpo.innerHTML = "";
+
+  if (rankingObrasFiltradas.length === 0) {
+    if (msgVazio) msgVazio.style.display = "block";
+    return;
+  }
+  if (msgVazio) msgVazio.style.display = "none";
+
+  rankingObrasFiltradas.forEach((obra) => {
+    const tr = document.createElement("tr");
+    tr.className = "spreadsheet-row";
+
+    let rankGeralHtml = `<span style="font-weight: 700; color: var(--text-muted);">${obra.rank_geral}º</span>`;
+    if (obra.rank_geral === 1) rankGeralHtml = `<span style="font-size: 15px; font-weight: 900; color: #fbbf24;">🥇 1º</span>`;
+    else if (obra.rank_geral === 2) rankGeralHtml = `<span style="font-size: 14px; font-weight: 800; color: #cbd5e1;">🥈 2º</span>`;
+    else if (obra.rank_geral === 3) rankGeralHtml = `<span style="font-size: 14px; font-weight: 800; color: #d97706;">🥉 3º</span>`;
+
+    const coverImg = obra.cover_url 
+      ? `<img src="${obra.cover_url}" style="width: 44px; height: 60px; object-fit: cover; border-radius: 4px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">`
+      : `<div style="width: 44px; height: 60px; background: rgba(255,255,255,0.06); border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><sl-icon name="image" style="color: var(--text-muted);"></sl-icon></div>`;
+
+    const formatoBadge = obra.formato ? `<span style="font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,0.1); color: var(--text-main); text-transform: uppercase;">${obra.formato}</span>` : "";
+    const estudioHtml = obra.estudio ? `<span style="font-size: 11px; color: var(--text-muted);">${obra.estudio}</span>` : "";
+
+    let seasonColor = "#3b82f6";
+    const tempNomeLower = (obra.temporada_nome || "").toLowerCase();
+    if (tempNomeLower.includes("primavera") || tempNomeLower.includes("spring")) seasonColor = "#10b981";
+    else if (tempNomeLower.includes("verão") || tempNomeLower.includes("verao") || tempNomeLower.includes("summer")) seasonColor = "#f59e0b";
+    else if (tempNomeLower.includes("outono") || tempNomeLower.includes("fall")) seasonColor = "#ef4444";
+
+    const rankTempBadge = obra.rank_temporada ? `<span style="font-size: 10px; color: var(--text-muted); display: block; margin-top: 3px;">#${obra.rank_temporada} na temp.</span>` : "";
+
+    let notaClass = "score-none";
+    let notaTexto = "--";
+    if (obra.nota_pessoal !== null && obra.nota_pessoal !== undefined) {
+      notaTexto = Number(obra.nota_pessoal).toString();
+      if (obra.nota_pessoal >= 9.5) notaClass = "score-perfect";
+      else if (obra.nota_pessoal >= 8.5) notaClass = "score-high";
+      else if (obra.nota_pessoal >= 7.0) notaClass = "score-good";
+      else if (obra.nota_pessoal >= 5.0) notaClass = "score-regular";
+      else notaClass = "score-low";
+    }
+
+    const malBadge = obra.nota_mal 
+      ? `<a href="${obra.url_mal || '#'}" target="_blank" style="text-decoration: none; display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 4px; background: #2e51a2; color: #fff; font-size: 11px; font-weight: 700;" title="Nota MyAnimeList">
+           <span>MAL</span> <span>${obra.nota_mal.toFixed(1)}</span>
+         </a>`
+      : `<span style="font-size: 11px; color: var(--text-muted); opacity: 0.5;">-</span>`;
+
+    const alBadge = obra.nota_anilist 
+      ? `<a href="${obra.url_anilist || '#'}" target="_blank" style="text-decoration: none; display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 4px; background: #02a9ff; color: #fff; font-size: 11px; font-weight: 700;" title="Nota AniList">
+           <span>AL</span> <span>${obra.nota_anilist.toFixed(1)}</span>
+         </a>`
+      : `<span style="font-size: 11px; color: var(--text-muted); opacity: 0.5;">-</span>`;
+
+    let generosHtml = "";
+    if (Array.isArray(obra.generos) && obra.generos.length > 0) {
+      generosHtml = obra.generos.map(g => `<span class="tag-genre-chip" data-genre="${g}">${g}</span>`).join("");
+    } else {
+      generosHtml = `<span style="color: var(--text-muted); font-size: 11px;">-</span>`;
+    }
+
+    const epsTexto = obra.episodios ? `${obra.episodios} eps` : "? eps";
+    const statusTexto = obra.status || "";
+
+    const linkMalHtml = obra.url_mal 
+      ? `<a href="${obra.url_mal}" target="_blank" class="btn-action-icon" title="Ver no MyAnimeList" style="color: #2e51a2;"><sl-icon name="link-45deg"></sl-icon></a>` 
+      : "";
+    const linkAniListHtml = obra.url_anilist 
+      ? `<a href="${obra.url_anilist}" target="_blank" class="btn-action-icon" title="Ver no AniList" style="color: #02a9ff;"><sl-icon name="box-arrow-up-right"></sl-icon></a>` 
+      : "";
+    const linkStreamingHtml = obra.streaming_url 
+      ? `<a href="${obra.streaming_url}" target="_blank" class="btn-action-icon" title="Assistir no ${obra.streaming_nome || 'Streaming'}" style="color: #4CAF50;"><sl-icon name="play-circle-fill"></sl-icon></a>` 
+      : "";
+
+    tr.innerHTML = `
+      <td class="spreadsheet-cell" style="text-align: center;">${rankGeralHtml}</td>
+      <td class="spreadsheet-cell">
+        <div style="display: flex; gap: 10px; align-items: center;">
+          ${coverImg}
+          <div style="min-width: 0;">
+            <div style="font-weight: 700; color: var(--text-main); font-size: 13px; line-height: 1.3; margin-bottom: 2px;">${obra.titulo}</div>
+            ${obra.titulo_english && obra.titulo_english !== obra.titulo ? `<div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${obra.titulo_english}</div>` : ''}
+            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+              ${formatoBadge}
+              ${estudioHtml}
+            </div>
+          </div>
+        </div>
+      </td>
+      <td class="spreadsheet-cell">
+        <span style="display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: rgba(255,255,255,0.06); border-left: 3px solid ${seasonColor}; color: var(--text-main);">
+          ${obra.temporada_nome || obra.temporada_id}
+        </span>
+        ${rankTempBadge}
+      </td>
+      <td class="spreadsheet-cell" style="text-align: center;">
+        <span class="badge-score-pill ${notaClass}">${notaTexto}</span>
+      </td>
+      <td class="spreadsheet-cell" style="text-align: center;">
+        <div style="display: flex; gap: 4px; justify-content: center; align-items: center; flex-wrap: wrap;">
+          ${malBadge}
+          ${alBadge}
+        </div>
+      </td>
+      <td class="spreadsheet-cell">${generosHtml}</td>
+      <td class="spreadsheet-cell" style="text-align: center;">
+        <div style="font-weight: 600; color: var(--text-main); font-size: 12px;">${epsTexto}</div>
+        ${statusTexto ? `<div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">${statusTexto}</div>` : ''}
+      </td>
+      <td class="spreadsheet-cell" style="text-align: center;">
+        <div style="display: flex; gap: 5px; justify-content: center; align-items: center;">
+          ${linkStreamingHtml}
+          ${linkMalHtml}
+          ${linkAniListHtml}
+        </div>
+      </td>
+    `;
+
+    tr.querySelectorAll(".tag-genre-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const genero = chip.dataset.genre;
+        const selG = document.getElementById("filtroGenero");
+        if (selG) {
+          selG.value = genero;
+          aplicarFiltrosEOrdenacao();
+        }
+      });
+    });
+
+    corpo.appendChild(tr);
+  });
+}
+
+function configurarEventosPlanilha() {
+  document.querySelectorAll("#tabelaRankings th[data-sort]").forEach(th => {
+    th.addEventListener("click", () => {
+      const col = th.dataset.sort;
+      if (ordenacaoAtual.coluna === col) {
+        ordenacaoAtual.direcao = ordenacaoAtual.direcao === "asc" ? "desc" : "asc";
+      } else {
+        ordenacaoAtual.coluna = col;
+        ordenacaoAtual.direcao = (col === "titulo" || col === "rank_geral") ? "asc" : "desc";
+      }
+
+      document.querySelectorAll("#tabelaRankings th[data-sort] .sort-icon").forEach(span => span.innerText = "");
+      const iconSpan = th.querySelector(".sort-icon");
+      if (iconSpan) iconSpan.innerText = ordenacaoAtual.direcao === "asc" ? "▲" : "▼";
+
+      aplicarFiltrosEOrdenacao();
+    });
+  });
+
+  ["filtroTexto", "filtroTemporada", "filtroGenero", "filtroNota", "filtroStreaming"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener(el.tagName === "SL-SELECT" ? "sl-change" : "sl-input", () => {
+        aplicarFiltrosEOrdenacao();
+      });
+    }
+  });
+
+  const btnLimpar = document.getElementById("btnLimparFiltros");
+  if (btnLimpar) {
+    btnLimpar.addEventListener("click", () => {
+      const fTexto = document.getElementById("filtroTexto");
+      const fTemp = document.getElementById("filtroTemporada");
+      const fGen = document.getElementById("filtroGenero");
+      const fNota = document.getElementById("filtroNota");
+      const fStream = document.getElementById("filtroStreaming");
+      if (fTexto) fTexto.value = "";
+      if (fTemp) fTemp.value = "todas";
+      if (fGen) fGen.value = "todos";
+      if (fNota) fNota.value = "todas";
+      if (fStream) fStream.value = "todos";
+      aplicarFiltrosEOrdenacao();
+    });
+  }
+
+  const btnManual = document.getElementById("btnCarregarManualId");
+  if (btnManual) {
+    btnManual.addEventListener("click", () => {
+      const val = document.getElementById("inputManualRankingId")?.value?.trim();
+      if (val) {
+        window.location.hash = `#/rankings?id=${val}`;
+        carregarPlanilhaRanking(val);
+      }
+    });
+  }
+}
+
