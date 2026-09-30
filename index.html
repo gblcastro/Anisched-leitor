@@ -352,15 +352,6 @@
       <p id="spreadsheetErrorMessage" style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px;">
         O arquivo não pôde ser baixado do Google Drive.
       </p>
-      
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color, rgba(255,255,255,0.1)); border-radius: 8px; padding: 15px; text-align: left; font-size: 12px; color: var(--text-main); margin-bottom: 20px;">
-        <strong style="color: #ff9800; display: block; margin-bottom: 6px;">💡 Dica de Conexão Direta:</strong>
-        <span>Se a sua rede de internet possui firewall corporativo (ex: Sophos/Fortinet) que bloqueia servidores proxy, ou para carregamento instantâneo sem intermediários, você pode inserir uma Chave de API Google (restrita no Google Cloud ao domínio deste site):</span>
-        <div style="display: flex; gap: 8px; margin-top: 10px;">
-          <sl-input id="inputGoogleApiKey" placeholder="AIzaSy... (Chave de API do Google Cloud)" size="small" style="flex: 1;"></sl-input>
-          <sl-button id="btnSalvarGoogleApiKey" variant="primary" size="small">Salvar e Recarregar</sl-button>
-        </div>
-      </div>
 
       <sl-button id="btnTentarNovamente" variant="default" size="small">
         <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon>

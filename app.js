@@ -1609,19 +1609,6 @@ function configurarEventosPlanilha() {
     });
   }
 
-  const btnSalvarKey = document.getElementById("btnSalvarGoogleApiKey");
-  if (btnSalvarKey) {
-    btnSalvarKey.addEventListener("click", () => {
-      const input = document.getElementById("inputGoogleApiKey");
-      const keyVal = input?.value?.trim();
-      if (keyVal) {
-        localStorage.setItem("anisched_google_api_key", keyVal);
-        const idUrl = obterParametroUrl("id") || obterParametroUrl("driveId") || localStorage.getItem('ultimo_ranking_id');
-        if (idUrl) carregarPlanilhaRanking(idUrl);
-      }
-    });
-  }
-
   const btnTentarNovamente = document.getElementById("btnTentarNovamente");
   if (btnTentarNovamente) {
     btnTentarNovamente.addEventListener("click", () => {
