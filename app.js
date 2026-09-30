@@ -3,6 +3,13 @@
 const CLIENT_ID = '1040345830968-4hvu86rveeqf54aujtk1q5frt2a4jga2.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
 
+// Chave pública de API do Google Cloud (Opcional, mas altamente recomendada para carregar rankings sem login e sem depender de proxies)
+// Dica: Restrinja essa chave no Google Cloud Console por HTTP Referrer para https://gblcastro.github.io/*
+const GOOGLE_API_KEY = 'AIzaSyCmWYBSHqDSghFQVpcxhpdPgwJAO1eFGkI';
+
+// URL de Web App do Google Apps Script (Alternativa caso use script de relay)
+const GOOGLE_APPS_SCRIPT_URL = '';
+
 let tokenClient;
 let accessToken = null;
 
@@ -1107,10 +1114,13 @@ async function carregarPlanilhaRanking(fileId) {
   const loadingEl = document.getElementById("spreadsheetLoading");
   const contentEl = document.getElementById("spreadsheetContent");
   const promptEl = document.getElementById("spreadsheetInputPrompt");
+  const errorEl = document.getElementById("spreadsheetErrorContainer");
+  const errorMsgEl = document.getElementById("spreadsheetErrorMessage");
 
   if (loadingEl) loadingEl.style.display = "block";
   if (contentEl) contentEl.style.display = "none";
   if (promptEl) promptEl.style.display = "none";
+  if (errorEl) errorEl.style.display = "none";
 
   const cacheKey = `cached_ranking_${fileId}`;
   const cachedDataStr = localStorage.getItem(cacheKey);
@@ -1125,6 +1135,7 @@ async function carregarPlanilhaRanking(fileId) {
   try {
     let jsonBaixado = null;
 
+    // 1. Tentar com accessToken se autenticado no Leitor Web
     if (accessToken) {
       try {
         const respDrive = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
@@ -1134,10 +1145,49 @@ async function carregarPlanilhaRanking(fileId) {
           jsonBaixado = await respDrive.json();
         }
       } catch(eDrive) {
-        console.warn("Fetch direto com token falhou, tentando relays públicos:", eDrive);
+        console.warn("[Rankings] Fetch direto com token falhou:", eDrive);
       }
     }
 
+    // 2. Tentar com Google API Key (se declarada no topo ou salva no localStorage)
+    const apiKey = GOOGLE_API_KEY || localStorage.getItem('anisched_google_api_key');
+    if (!jsonBaixado && apiKey) {
+      try {
+        const respDriveKey = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${apiKey}`);
+        if (respDriveKey.ok) {
+          jsonBaixado = await respDriveKey.json();
+        } else {
+          console.warn(`[Drive API] Requisição com API Key retornou status ${respDriveKey.status}`);
+        }
+      } catch(eKey) {
+        console.warn("[Drive API] Falha com API Key:", eKey);
+      }
+    }
+
+    // 3. Tentar com Google Apps Script se configurado
+    const appsScriptUrl = GOOGLE_APPS_SCRIPT_URL || localStorage.getItem('anisched_apps_script_url');
+    if (!jsonBaixado && appsScriptUrl) {
+      try {
+        const respScript = await fetch(`${appsScriptUrl}?id=${fileId}`);
+        if (respScript.ok) {
+          jsonBaixado = await respScript.json();
+        }
+      } catch(eScript) {
+        console.warn("[Apps Script] Falha:", eScript);
+      }
+    }
+
+    // 4. Tentar fetch direto (caso navegador ou extensão tenha suporte/CORS)
+    if (!jsonBaixado) {
+      try {
+        const directResp = await fetch(`https://drive.google.com/uc?export=download&id=${fileId}`);
+        if (directResp.ok) {
+          jsonBaixado = await directResp.json();
+        }
+      } catch(eDirect) {}
+    }
+
+    // 5. Tentar relays públicos com timeout curto de 5s para não travar
     if (!jsonBaixado) {
       const downloadDriveUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
       const proxyEndpoints = [
@@ -1148,7 +1198,10 @@ async function carregarPlanilhaRanking(fileId) {
 
       for (const pUrl of proxyEndpoints) {
         try {
-          const resp = await fetch(pUrl);
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 5000);
+          const resp = await fetch(pUrl, { signal: controller.signal });
+          clearTimeout(timer);
           if (resp.ok) {
             const data = await resp.json();
             if (data && Array.isArray(data.animes)) {
@@ -1156,9 +1209,7 @@ async function carregarPlanilhaRanking(fileId) {
               break;
             }
           }
-        } catch(eProxy) {
-          console.warn(`Proxy ${pUrl} falhou, tentando próximo relay...`);
-        }
+        } catch(eProxy) {}
       }
     }
 
@@ -1175,8 +1226,15 @@ async function carregarPlanilhaRanking(fileId) {
     console.error("Erro ao carregar planilha de rankings:", erro);
     if (!cachedDataStr) {
       if (loadingEl) loadingEl.style.display = "none";
-      if (promptEl) promptEl.style.display = "block";
-      alert("Erro ao carregar a planilha pública do Google Drive: " + erro.message);
+      if (contentEl) contentEl.style.display = "none";
+      if (errorEl) {
+        errorEl.style.display = "block";
+        if (errorMsgEl) {
+          errorMsgEl.innerText = "O arquivo não pôde ser baixado do Google Drive. Possíveis causas: 1) O arquivo ainda não tem permissão pública ('Qualquer pessoa com o link'); 2) A sua rede bloqueou o acesso a proxies (comum em redes corporativas com firewall Sophos/Fortinet).";
+        }
+      } else if (promptEl) {
+        promptEl.style.display = "block";
+      }
     }
   }
 }
@@ -1548,6 +1606,27 @@ function configurarEventosPlanilha() {
         window.location.hash = `#/rankings?id=${val}`;
         carregarPlanilhaRanking(val);
       }
+    });
+  }
+
+  const btnSalvarKey = document.getElementById("btnSalvarGoogleApiKey");
+  if (btnSalvarKey) {
+    btnSalvarKey.addEventListener("click", () => {
+      const input = document.getElementById("inputGoogleApiKey");
+      const keyVal = input?.value?.trim();
+      if (keyVal) {
+        localStorage.setItem("anisched_google_api_key", keyVal);
+        const idUrl = obterParametroUrl("id") || obterParametroUrl("driveId") || localStorage.getItem('ultimo_ranking_id');
+        if (idUrl) carregarPlanilhaRanking(idUrl);
+      }
+    });
+  }
+
+  const btnTentarNovamente = document.getElementById("btnTentarNovamente");
+  if (btnTentarNovamente) {
+    btnTentarNovamente.addEventListener("click", () => {
+      const idUrl = obterParametroUrl("id") || obterParametroUrl("driveId") || localStorage.getItem('ultimo_ranking_id');
+      if (idUrl) carregarPlanilhaRanking(idUrl);
     });
   }
 }
