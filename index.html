@@ -132,11 +132,40 @@
       color: var(--text-main);
       margin: 2px 3px 2px 0;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+      user-select: none;
     }
     .tag-genre-chip:hover {
       background: rgba(76, 175, 80, 0.25);
       color: #4CAF50;
+      border-color: rgba(76, 175, 80, 0.4);
+    }
+    .tag-genre-chip.active {
+      background: #4CAF50 !important;
+      color: #ffffff !important;
+      font-weight: 700;
+      box-shadow: 0 1px 6px rgba(76, 175, 80, 0.4);
+      border-color: #388e3c;
+    }
+    .active-genre-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 12px;
+      background: #4CAF50;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(76, 175, 80, 0.3);
+      transition: background 0.15s, transform 0.15s;
+      user-select: none;
+    }
+    .active-genre-pill:hover {
+      background: #388e3c;
+      transform: scale(1.03);
     }
     .btn-action-icon {
       display: inline-flex;
@@ -400,6 +429,12 @@
             <sl-icon slot="prefix" name="funnel"></sl-icon>
             <span data-i18n="spreadsheet_clear_filters">Limpar Filtros</span>
           </sl-button>
+        </div>
+
+        <!-- Barra de Gêneros Selecionados (Multi-Filtro) -->
+        <div id="containerGenerosAtivos" style="display: none; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid var(--border-color, rgba(255,255,255,0.06)); font-size: 12px;">
+          <span style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-weight: 700;">Gêneros combinados:</span>
+          <div id="listaChipsGenerosAtivos" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;"></div>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-muted); padding-top: 4px; border-top: 1px solid var(--border-color, rgba(255,255,255,0.06));">

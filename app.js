@@ -1066,6 +1066,7 @@ window.togglePremiereColor = function(el, animeId) {
 let rankingGlobalData = null;
 let rankingObrasFiltradas = [];
 let ordenacaoAtual = { coluna: "nota_pessoal", direcao: "desc" };
+let generosFiltroAtivos = new Set();
 
 function obterParametroUrl(nome) {
   const urlParams = new URLSearchParams(window.location.search);
@@ -1362,12 +1363,66 @@ function renderizarPlanilha(dados) {
   aplicarFiltrosEOrdenacao();
 }
 
+function atualizarVisualFiltroGeneros() {
+  const container = document.getElementById("containerGenerosAtivos");
+  const listaChips = document.getElementById("listaChipsGenerosAtivos");
+  const selG = document.getElementById("filtroGenero");
+
+  if (!container || !listaChips) return;
+
+  if (generosFiltroAtivos.size === 0) {
+    container.style.display = "none";
+    listaChips.innerHTML = "";
+    if (selG) selG.value = "todos";
+  } else {
+    container.style.display = "flex";
+    listaChips.innerHTML = "";
+
+    Array.from(generosFiltroAtivos).forEach(gen => {
+      const rotulo = (typeof NOMES_GENEROS_PT !== "undefined" && NOMES_GENEROS_PT[gen]) ? NOMES_GENEROS_PT[gen] : gen;
+      const pill = document.createElement("span");
+      pill.className = "active-genre-pill";
+      pill.innerHTML = `<span>${rotulo}</span> <sl-icon name="x-circle-fill" style="font-size: 12px;"></sl-icon>`;
+      pill.title = `Remover ${rotulo} do filtro`;
+      pill.onclick = () => {
+        generosFiltroAtivos.delete(gen);
+        atualizarVisualFiltroGeneros();
+        aplicarFiltrosEOrdenacao();
+      };
+      listaChips.appendChild(pill);
+    });
+
+    if (generosFiltroAtivos.size > 1) {
+      const btnLimparTodos = document.createElement("span");
+      btnLimparTodos.style.fontSize = "11px";
+      btnLimparTodos.style.color = "var(--text-muted)";
+      btnLimparTodos.style.textDecoration = "underline";
+      btnLimparTodos.style.cursor = "pointer";
+      btnLimparTodos.style.marginLeft = "4px";
+      btnLimparTodos.innerText = "Limpar gêneros";
+      btnLimparTodos.onclick = () => {
+        generosFiltroAtivos.clear();
+        atualizarVisualFiltroGeneros();
+        aplicarFiltrosEOrdenacao();
+      };
+      listaChips.appendChild(btnLimparTodos);
+    }
+
+    if (selG) {
+      if (generosFiltroAtivos.size === 1) {
+        selG.value = Array.from(generosFiltroAtivos)[0];
+      } else {
+        selG.value = "todos";
+      }
+    }
+  }
+}
+
 function aplicarFiltrosEOrdenacao() {
   if (!rankingGlobalData || !Array.isArray(rankingGlobalData.animes)) return;
 
   const txtBusca = (document.getElementById("filtroTexto")?.value || "").toLowerCase().trim();
   const selTemp = document.getElementById("filtroTemporada")?.value || "todas";
-  const selGen = document.getElementById("filtroGenero")?.value || "todos";
   const selNota = document.getElementById("filtroNota")?.value || "todas";
   const selStream = document.getElementById("filtroStreaming")?.value || "todos";
 
@@ -1383,8 +1438,11 @@ function aplicarFiltrosEOrdenacao() {
       if (a.temporada_id !== selTemp && a.temporada_nome !== selTemp) return false;
     }
 
-    if (selGen !== "todos") {
-      if (!Array.isArray(a.generos) || !a.generos.includes(selGen)) return false;
+    // Filtro Multi-Gênero (Interseção: a obra deve conter TODOS os gêneros selecionados)
+    if (generosFiltroAtivos.size > 0) {
+      if (!Array.isArray(a.generos) || a.generos.length === 0) return false;
+      const contemTodos = Array.from(generosFiltroAtivos).every(g => a.generos.includes(g));
+      if (!contemTodos) return false;
     }
 
     if (selNota === "10") {
@@ -1413,16 +1471,22 @@ function aplicarFiltrosEOrdenacao() {
 
   rankingObrasFiltradas.sort((a, b) => {
     if (col === "nota_pessoal") {
-      const nA = a.nota_pessoal !== null && a.nota_pessoal !== undefined ? a.nota_pessoal : -1;
-      const nB = b.nota_pessoal !== null && b.nota_pessoal !== undefined ? b.nota_pessoal : -1;
-      if (nA !== nB) return (nA - nB) * dir;
+      const temA = a.nota_pessoal !== null && a.nota_pessoal !== undefined;
+      const temB = b.nota_pessoal !== null && b.nota_pessoal !== undefined;
+      if (temA && !temB) return -1 * dir;
+      if (!temA && temB) return 1 * dir;
+      if (temA && temB && a.nota_pessoal !== b.nota_pessoal) {
+        return (a.nota_pessoal - b.nota_pessoal) * dir;
+      }
       const pubA = a.nota_mal || a.nota_anilist || 0;
       const pubB = b.nota_mal || b.nota_anilist || 0;
-      if (pubA !== pubB) return pubB - pubA;
-      return (a.rank_geral || 0) - (b.rank_geral || 0);
+      if (pubA !== pubB) return (pubA - pubB) * dir;
+      return ((a.rank_geral || 9999) - (b.rank_geral || 9999)) * dir;
     }
     if (col === "rank_geral") {
-      return ((a.rank_geral || 9999) - (b.rank_geral || 9999)) * dir;
+      const rA = (a.rank_geral !== null && a.rank_geral !== undefined) ? a.rank_geral : 99999;
+      const rB = (b.rank_geral !== null && b.rank_geral !== undefined) ? b.rank_geral : 99999;
+      return (rA - rB) * dir;
     }
     if (col === "titulo") {
       return (a.titulo || "").localeCompare(b.titulo || "") * dir;
@@ -1479,15 +1543,18 @@ function aplicarFiltrosEOrdenacao() {
     const tr = document.createElement("tr");
     tr.className = "spreadsheet-row";
 
-    let rankGeralHtml = `<span style="font-weight: 700; color: var(--text-muted);">${obra.rank_geral}º</span>`;
-    if (obra.rank_geral === 1) rankGeralHtml = `<span style="font-size: 15px; font-weight: 900; color: #fbbf24;">🥇 1º</span>`;
-    else if (obra.rank_geral === 2) rankGeralHtml = `<span style="font-size: 14px; font-weight: 800; color: #cbd5e1;">🥈 2º</span>`;
-    else if (obra.rank_geral === 3) rankGeralHtml = `<span style="font-size: 14px; font-weight: 800; color: #d97706;">🥉 3º</span>`;
+    let rankGeralHtml = `<span style="color: var(--text-muted); opacity: 0.4; font-weight: 700;">-</span>`;
+    if (obra.rank_geral !== null && obra.rank_geral !== undefined) {
+      if (obra.rank_geral === 1) rankGeralHtml = `<span style="font-size: 15px; font-weight: 900; color: #fbbf24;">🥇 1º</span>`;
+      else if (obra.rank_geral === 2) rankGeralHtml = `<span style="font-size: 14px; font-weight: 800; color: #cbd5e1;">🥈 2º</span>`;
+      else if (obra.rank_geral === 3) rankGeralHtml = `<span style="font-size: 14px; font-weight: 800; color: #d97706;">🥉 3º</span>`;
+      else rankGeralHtml = `<span style="font-weight: 700; color: var(--text-muted);">${obra.rank_geral}º</span>`;
+    }
 
     const coverImg = obra.cover_url 
       ? `<div style="width: 44px; height: 60px; flex-shrink: 0; position: relative; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
            <sl-icon name="image" style="color: var(--text-muted); font-size: 18px; position: absolute;"></sl-icon>
-           <img src="${obra.cover_url}" loading="lazy" onerror="if(this.src.includes('/cover/extraLarge/')){this.src=this.src.replace('/cover/extraLarge/','/cover/large/');}else{this.style.display='none';}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">
+           <img src="${obra.cover_url}" loading="lazy" onerror="if(!this.dataset.step){this.dataset.step='1';if(this.src.includes('/cover/large/')){this.src=this.src.replace('/cover/large/','/cover/medium/');}else if(this.src.includes('/cover/extraLarge/')){this.src=this.src.replace('/cover/extraLarge/','/cover/large/');}else{this.style.display='none';}}else if(this.dataset.step==='1'){this.dataset.step='2';if(this.src.includes('/cover/large/')){this.src=this.src.replace('/cover/large/','/cover/medium/');}else{this.style.display='none';}}else{this.style.display='none';}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">
          </div>`
       : `<div style="width: 44px; height: 60px; background: rgba(255,255,255,0.06); border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><sl-icon name="image" style="color: var(--text-muted);"></sl-icon></div>`;
 
@@ -1503,7 +1570,7 @@ function aplicarFiltrosEOrdenacao() {
     const rankTempBadge = obra.rank_temporada ? `<span style="font-size: 10px; color: var(--text-muted); display: block; margin-top: 3px;">#${obra.rank_temporada} na temp.</span>` : "";
 
     let notaClass = "score-none";
-    let notaTexto = "--";
+    let notaTexto = "-";
     if (obra.nota_pessoal !== null && obra.nota_pessoal !== undefined) {
       notaTexto = Number(obra.nota_pessoal).toString();
       if (obra.nota_pessoal >= 9.5) notaClass = "score-perfect";
@@ -1555,7 +1622,8 @@ function aplicarFiltrosEOrdenacao() {
     if (Array.isArray(obra.generos) && obra.generos.length > 0) {
       generosHtml = obra.generos.map(g => {
         const rotulo = (typeof NOMES_GENEROS_PT !== "undefined" && NOMES_GENEROS_PT[g]) ? NOMES_GENEROS_PT[g] : g;
-        return `<span class="tag-genre-chip" data-genre="${g}">${rotulo}</span>`;
+        const isActive = generosFiltroAtivos.has(g);
+        return `<span class="tag-genre-chip ${isActive ? 'active' : ''}" data-genre="${g}" title="Clique para alternar filtro por ${rotulo}">${rotulo}</span>`;
       }).join("");
     } else {
       generosHtml = `<span style="color: var(--text-muted); font-size: 11px;">-</span>`;
@@ -1633,11 +1701,14 @@ function aplicarFiltrosEOrdenacao() {
     tr.querySelectorAll(".tag-genre-chip").forEach(chip => {
       chip.addEventListener("click", () => {
         const genero = chip.dataset.genre;
-        const selG = document.getElementById("filtroGenero");
-        if (selG) {
-          selG.value = genero;
-          aplicarFiltrosEOrdenacao();
+        if (!genero) return;
+        if (generosFiltroAtivos.has(genero)) {
+          generosFiltroAtivos.delete(genero);
+        } else {
+          generosFiltroAtivos.add(genero);
         }
+        atualizarVisualFiltroGeneros();
+        aplicarFiltrosEOrdenacao();
       });
     });
 
@@ -1664,7 +1735,7 @@ function configurarEventosPlanilha() {
     });
   });
 
-  ["filtroTexto", "filtroTemporada", "filtroGenero", "filtroNota", "filtroStreaming"].forEach(id => {
+  ["filtroTexto", "filtroTemporada", "filtroNota", "filtroStreaming"].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.addEventListener(el.tagName === "SL-SELECT" ? "sl-change" : "sl-input", () => {
@@ -1672,6 +1743,21 @@ function configurarEventosPlanilha() {
       });
     }
   });
+
+  const elGenero = document.getElementById("filtroGenero");
+  if (elGenero) {
+    elGenero.addEventListener("sl-change", () => {
+      const val = elGenero.value;
+      if (val === "todos") {
+        generosFiltroAtivos.clear();
+      } else if (val) {
+        generosFiltroAtivos.clear();
+        generosFiltroAtivos.add(val);
+      }
+      atualizarVisualFiltroGeneros();
+      aplicarFiltrosEOrdenacao();
+    });
+  }
 
   const btnLimpar = document.getElementById("btnLimparFiltros");
   if (btnLimpar) {
@@ -1686,6 +1772,8 @@ function configurarEventosPlanilha() {
       if (fGen) fGen.value = "todos";
       if (fNota) fNota.value = "todas";
       if (fStream) fStream.value = "todos";
+      generosFiltroAtivos.clear();
+      atualizarVisualFiltroGeneros();
       aplicarFiltrosEOrdenacao();
     });
   }
