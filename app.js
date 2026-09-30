@@ -1465,17 +1465,43 @@ function aplicarFiltrosEOrdenacao() {
       else notaClass = "score-low";
     }
 
-    const malBadge = obra.nota_mal 
-      ? `<a href="${obra.url_mal || '#'}" target="_blank" style="text-decoration: none; display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 4px; background: #2e51a2; color: #fff; font-size: 11px; font-weight: 700;" title="Nota MyAnimeList">
-           <span>MAL</span> <span>${obra.nota_mal.toFixed(1)}</span>
-         </a>`
-      : `<span style="font-size: 11px; color: var(--text-muted); opacity: 0.5;">-</span>`;
+    const malIconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink: 0;"><path d="M14.921 6.479c-.82 0-3.683 0-4.947 3.156-.662 1.652-.986 4.812.876 7.886l1.934-1.41s-.767-1.095-1.083-3.191h2.897l.022 3.19h2.604V8.835h-2.581v2.043l-2.46-.023s.413-2.408 2.877-2.336h2.454l-.572-2.04ZM0 6.528v9.624h2.348v-5.84l2.031 2.664 2.047-2.652v5.828h2.336V6.528H6.437L4.368 9.474 2.31 6.528Zm18.447.022v9.583h5.022L24 14.09h-3.232V6.55Z"/></svg>`;
 
-    const alBadge = obra.nota_anilist 
-      ? `<a href="${obra.url_anilist || '#'}" target="_blank" style="text-decoration: none; display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 4px; background: #02a9ff; color: #fff; font-size: 11px; font-weight: 700;" title="Nota AniList">
-           <span>AL</span> <span>${obra.nota_anilist.toFixed(1)}</span>
-         </a>`
-      : `<span style="font-size: 11px; color: var(--text-muted); opacity: 0.5;">-</span>`;
+    const alIconSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink: 0;"><path d="M24 17.53v2.421c0 .71-.391 1.101-1.1 1.101h-5l-.057-.165L11.84 3.736c.106-.502.46-.788 1.053-.788h2.422c.71 0 1.1.391 1.1 1.1v12.38H22.9c.71 0 1.1.392 1.1 1.101zM11.034 2.947l6.337 18.104h-4.918l-1.052-3.131H6.019l-1.077 3.131H0L6.361 2.948h4.673zm-.66 10.96-1.69-5.014-1.541 5.015h3.23z"/></svg>`;
+
+    let malBadge = "";
+    if (obra.nota_mal !== null && obra.nota_mal !== undefined) {
+      malBadge = `
+        <a href="${obra.url_mal || '#'}" ${obra.url_mal ? 'target="_blank"' : ''} style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 4px; background: #2e51a2; color: #fff; font-size: 11px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: opacity 0.15s, transform 0.15s;" title="Ver no MyAnimeList (Nota: ${obra.nota_mal.toFixed(1)})">
+          ${malIconSvg}
+          <span>${obra.nota_mal.toFixed(1)}</span>
+        </a>`;
+    } else if (obra.url_mal) {
+      malBadge = `
+        <a href="${obra.url_mal}" target="_blank" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; background: rgba(46,81,162,0.4); color: #cbd5e1; font-size: 11px; font-weight: 700;" title="Ver no MyAnimeList">
+          ${malIconSvg}
+          <span style="opacity: 0.6;">-</span>
+        </a>`;
+    } else {
+      malBadge = `<span style="font-size: 11px; color: var(--text-muted); opacity: 0.4;">-</span>`;
+    }
+
+    let alBadge = "";
+    if (obra.nota_anilist !== null && obra.nota_anilist !== undefined) {
+      alBadge = `
+        <a href="${obra.url_anilist || '#'}" ${obra.url_anilist ? 'target="_blank"' : ''} style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 4px; background: #02a9ff; color: #fff; font-size: 11px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: opacity 0.15s, transform 0.15s;" title="Ver no AniList (Nota: ${obra.nota_anilist.toFixed(1)})">
+          ${alIconSvg}
+          <span>${obra.nota_anilist.toFixed(1)}</span>
+        </a>`;
+    } else if (obra.url_anilist) {
+      alBadge = `
+        <a href="${obra.url_anilist}" target="_blank" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; background: rgba(2,169,255,0.4); color: #cbd5e1; font-size: 11px; font-weight: 700;" title="Ver no AniList">
+          ${alIconSvg}
+          <span style="opacity: 0.6;">-</span>
+        </a>`;
+    } else {
+      alBadge = `<span style="font-size: 11px; color: var(--text-muted); opacity: 0.4;">-</span>`;
+    }
 
     let generosHtml = "";
     if (Array.isArray(obra.generos) && obra.generos.length > 0) {
@@ -1487,15 +1513,31 @@ function aplicarFiltrosEOrdenacao() {
     const epsTexto = obra.episodios ? `${obra.episodios} eps` : "? eps";
     const statusTexto = obra.status || "";
 
-    const linkMalHtml = obra.url_mal 
-      ? `<a href="${obra.url_mal}" target="_blank" class="btn-action-icon" title="Ver no MyAnimeList" style="color: #2e51a2;"><sl-icon name="link-45deg"></sl-icon></a>` 
-      : "";
-    const linkAniListHtml = obra.url_anilist 
-      ? `<a href="${obra.url_anilist}" target="_blank" class="btn-action-icon" title="Ver no AniList" style="color: #02a9ff;"><sl-icon name="box-arrow-up-right"></sl-icon></a>` 
-      : "";
-    const linkStreamingHtml = obra.streaming_url 
-      ? `<a href="${obra.streaming_url}" target="_blank" class="btn-action-icon" title="Assistir no ${obra.streaming_nome || 'Streaming'}" style="color: #4CAF50;"><sl-icon name="play-circle-fill"></sl-icon></a>` 
-      : "";
+    let streamingHtml = `<span style="font-size: 11px; color: var(--text-muted); opacity: 0.4;">-</span>`;
+    if (obra.streaming_url) {
+      const streamCor = obra.streaming_cor || "#2563eb";
+      const streamNome = obra.streaming_nome || "Streaming";
+      const streamBadge = obra.streaming_badge || (obra.streaming_nome ? obra.streaming_nome.substring(0, 2).toUpperCase() : "ST");
+      const streamTooltip = obra.streaming_is_manual 
+        ? `Assistir no ${streamNome} (Personalizado)` 
+        : `Assistir no ${streamNome}`;
+
+      let textColor = "#ffffff";
+      if (streamCor.startsWith("#") && streamCor.length >= 7) {
+        const r = parseInt(streamCor.slice(1, 3), 16);
+        const g = parseInt(streamCor.slice(3, 5), 16);
+        const b = parseInt(streamCor.slice(5, 7), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        if (yiq >= 140) textColor = "#111111";
+      }
+
+      streamingHtml = `
+        <a href="${obra.streaming_url}" target="_blank" style="text-decoration: none; display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 4px; background: ${streamCor}; color: ${textColor}; font-size: 11px; font-weight: 800; letter-spacing: 0.3px; box-shadow: 0 1px 4px rgba(0,0,0,0.3); transition: opacity 0.15s, transform 0.15s;" title="${streamTooltip}">
+          <sl-icon name="play-circle-fill" style="font-size: 13px;"></sl-icon>
+          <span>${streamBadge}</span>
+        </a>
+      `;
+    }
 
     tr.innerHTML = `
       <td class="spreadsheet-cell" style="text-align: center;">${rankGeralHtml}</td>
@@ -1522,7 +1564,7 @@ function aplicarFiltrosEOrdenacao() {
         <span class="badge-score-pill ${notaClass}">${notaTexto}</span>
       </td>
       <td class="spreadsheet-cell" style="text-align: center;">
-        <div style="display: flex; gap: 4px; justify-content: center; align-items: center; flex-wrap: wrap;">
+        <div style="display: flex; gap: 5px; justify-content: center; align-items: center; flex-wrap: wrap;">
           ${malBadge}
           ${alBadge}
         </div>
@@ -1533,11 +1575,7 @@ function aplicarFiltrosEOrdenacao() {
         ${statusTexto ? `<div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">${statusTexto}</div>` : ''}
       </td>
       <td class="spreadsheet-cell" style="text-align: center;">
-        <div style="display: flex; gap: 5px; justify-content: center; align-items: center;">
-          ${linkStreamingHtml}
-          ${linkMalHtml}
-          ${linkAniListHtml}
-        </div>
+        ${streamingHtml}
       </td>
     `;
 
