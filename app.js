@@ -1437,7 +1437,7 @@ function aplicarFiltrosEOrdenacao() {
     else if (obra.rank_geral === 3) rankGeralHtml = `<span style="font-size: 14px; font-weight: 800; color: #d97706;">🥉 3º</span>`;
 
     const coverImg = obra.cover_url 
-      ? `<img src="${obra.cover_url}" style="width: 44px; height: 60px; object-fit: cover; border-radius: 4px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">`
+      ? `<img src="${obra.cover_url}" loading="lazy" onerror="this.onerror=null;this.parentElement.innerHTML='<div style=\\'width: 44px; height: 60px; background: rgba(255,255,255,0.06); border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;\\'><sl-icon name=\\'image\\' style=\\'color: var(--text-muted);\\'></sl-icon></div>';" style="width: 44px; height: 60px; object-fit: cover; border-radius: 4px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">`
       : `<div style="width: 44px; height: 60px; background: rgba(255,255,255,0.06); border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><sl-icon name="image" style="color: var(--text-muted);"></sl-icon></div>`;
 
     const formatoBadge = obra.formato ? `<span style="font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,0.1); color: var(--text-main); text-transform: uppercase;">${obra.formato}</span>` : "";
