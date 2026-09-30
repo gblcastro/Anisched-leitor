@@ -253,6 +253,50 @@ const STREAMING_BADGES = {
   "OceanVeil (Unedited)": { code: "OV", color: "#00a2a5" }
 };
 
+const NOMES_GENEROS_PT = {
+  "Action": "Ação",
+  "Adventure": "Aventura",
+  "Comedy": "Comédia",
+  "Drama": "Drama",
+  "Sci-Fi": "Ficção Científica",
+  "Fantasy": "Fantasia",
+  "Slice of Life": "Slice of Life",
+  "Romance": "Romance",
+  "Mystery": "Mistério",
+  "Supernatural": "Sobrenatural",
+  "Psychological": "Psicológico",
+  "Sports": "Esportes",
+  "Thriller": "Suspense",
+  "Horror": "Terror",
+  "Mecha": "Mecha",
+  "Music": "Música",
+  "Ecchi": "Ecchi",
+  "Mahou Shoujo": "Garotas Mágicas",
+  "Award Winning": "Premiado",
+  "Gourmet": "Culinária",
+  "Suspense": "Suspense",
+  "Historical": "Histórico",
+  "Military": "Militar",
+  "Parody": "Paródia",
+  "Space": "Espacial",
+  "Police": "Policial",
+  "Martial Arts": "Artes Marciais",
+  "Super Power": "Super Poderes",
+  "Vampire": "Vampiros",
+  "Isekai": "Isekai"
+};
+
+function formatarStatusAnime(rawStatus) {
+  if (!rawStatus) return "";
+  const s = String(rawStatus).trim().toLowerCase();
+  if (s === "finished" || s === "finished_airing" || s === "finalizado") return "Finalizado";
+  if (s === "releasing" || s === "currently_airing" || s === "em exibição" || s === "em lançamento") return "Em exibição";
+  if (s === "not_yet_released" || s === "not_yet_aired" || s === "em breve") return "Em breve";
+  if (s === "cancelled" || s === "cancelado") return "Cancelado";
+  if (s === "hiatus" || s === "em pausa") return "Em pausa";
+  return rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
+}
+
 const ABREV_DIAS = {
   "segunda": "SEG", "terca": "TER", "quarta": "QUA", 
   "quinta": "QUI", "sexta": "SEX", "sabado": "SAB", "domingo": "DOM", "extra": "EXT"
@@ -1289,10 +1333,14 @@ function renderizarPlanilha(dados) {
     (dados.animes || []).forEach(a => {
       (a.generos || []).forEach(g => generosSet.add(g));
     });
-    Array.from(generosSet).sort().forEach(g => {
+    Array.from(generosSet).sort((a, b) => {
+      const rotA = NOMES_GENEROS_PT[a] || a;
+      const rotB = NOMES_GENEROS_PT[b] || b;
+      return rotA.localeCompare(rotB);
+    }).forEach(g => {
       const opt = document.createElement("sl-option");
       opt.value = g;
-      opt.innerText = g;
+      opt.innerText = NOMES_GENEROS_PT[g] || g;
       filtroGenero.appendChild(opt);
     });
   }
@@ -1505,13 +1553,16 @@ function aplicarFiltrosEOrdenacao() {
 
     let generosHtml = "";
     if (Array.isArray(obra.generos) && obra.generos.length > 0) {
-      generosHtml = obra.generos.map(g => `<span class="tag-genre-chip" data-genre="${g}">${g}</span>`).join("");
+      generosHtml = obra.generos.map(g => {
+        const rotulo = (typeof NOMES_GENEROS_PT !== "undefined" && NOMES_GENEROS_PT[g]) ? NOMES_GENEROS_PT[g] : g;
+        return `<span class="tag-genre-chip" data-genre="${g}">${rotulo}</span>`;
+      }).join("");
     } else {
       generosHtml = `<span style="color: var(--text-muted); font-size: 11px;">-</span>`;
     }
 
     const epsTexto = obra.episodios ? `${obra.episodios} eps` : "? eps";
-    const statusTexto = obra.status || "";
+    const statusFormatado = formatarStatusAnime(obra.status);
 
     let streamingHtml = `<span style="font-size: 11px; color: var(--text-muted); opacity: 0.4;">-</span>`;
     if (obra.streaming_url) {
@@ -1572,7 +1623,7 @@ function aplicarFiltrosEOrdenacao() {
       <td class="spreadsheet-cell">${generosHtml}</td>
       <td class="spreadsheet-cell" style="text-align: center;">
         <div style="font-weight: 600; color: var(--text-main); font-size: 12px;">${epsTexto}</div>
-        ${statusTexto ? `<div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">${statusTexto}</div>` : ''}
+        ${statusFormatado ? `<div style="font-size: 11px; color: var(--text-muted); font-weight: 500; margin-top: 2px;">${statusFormatado}</div>` : ''}
       </td>
       <td class="spreadsheet-cell" style="text-align: center;">
         ${streamingHtml}
