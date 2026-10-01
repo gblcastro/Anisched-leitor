@@ -38,6 +38,9 @@
       --border-color: #dddddd;
       --bg-card: #f0f2f5;
       --border-card: #cccccc;
+      --sl-color-primary-500: #10b981;
+      --sl-color-primary-600: #059669;
+      --sl-color-primary-text: #ffffff;
     }
     html.sl-theme-dark {
       --bg-main: #121212;
@@ -46,6 +49,15 @@
       --border-color: #2a2a2a;
       --bg-card: #1a2333;
       --border-card: #2b4570;
+      --sl-color-primary-50: #ecfdf5;
+      --sl-color-primary-100: #d1fae5;
+      --sl-color-primary-200: #a7f3d0;
+      --sl-color-primary-300: #6ee7b7;
+      --sl-color-primary-400: #34d399;
+      --sl-color-primary-500: #10b981;
+      --sl-color-primary-600: #059669;
+      --sl-color-primary-700: #047857;
+      --sl-color-primary-text: #ffffff;
     }
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -59,6 +71,92 @@
       padding: 15px;
       text-align: center;
       border-bottom: 1px solid var(--border-color);
+    }
+
+    /* Navegação em Abas no Cabeçalho (Agenda / Planilha de Rankings) */
+    .nav-tabs-wrapper sl-button::part(base) {
+      font-size: 13px;
+      font-weight: 500;
+      padding: 0 16px;
+      height: 34px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Aba Ativa (variant="primary") */
+    .nav-tabs-wrapper sl-button[variant="primary"]::part(base) {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+      border: 1px solid rgba(52, 211, 153, 0.5) !important;
+      color: #ffffff !important;
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35) !important;
+      font-weight: 600 !important;
+    }
+    .nav-tabs-wrapper sl-button[variant="primary"]::part(label),
+    .nav-tabs-wrapper sl-button[variant="primary"]::part(prefix) {
+      color: #ffffff !important;
+    }
+    .nav-tabs-wrapper sl-button[variant="primary"] sl-icon,
+    .nav-tabs-wrapper sl-button[variant="primary"] span {
+      color: #ffffff !important;
+      fill: #ffffff !important;
+    }
+
+    /* Aba Inativa (variant="default") - Modo Escuro */
+    html.sl-theme-dark .nav-tabs-wrapper sl-button[variant="default"]::part(base) {
+      background: rgba(255, 255, 255, 0.07) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      color: #e2e8f0 !important;
+      box-shadow: none !important;
+    }
+    html.sl-theme-dark .nav-tabs-wrapper sl-button[variant="default"]::part(label),
+    html.sl-theme-dark .nav-tabs-wrapper sl-button[variant="default"]::part(prefix) {
+      color: #e2e8f0 !important;
+    }
+    html.sl-theme-dark .nav-tabs-wrapper sl-button[variant="default"] sl-icon {
+      color: #94a3b8 !important;
+      fill: #94a3b8 !important;
+    }
+    html.sl-theme-dark .nav-tabs-wrapper sl-button[variant="default"] span {
+      color: #e2e8f0 !important;
+    }
+
+    /* Aba Inativa (variant="default") - Hover no Modo Escuro */
+    html.sl-theme-dark .nav-tabs-wrapper sl-button[variant="default"]:hover::part(base) {
+      background: rgba(255, 255, 255, 0.14) !important;
+      border-color: rgba(255, 255, 255, 0.25) !important;
+      color: #ffffff !important;
+    }
+    html.sl-theme-dark .nav-tabs-wrapper sl-button[variant="default"]:hover sl-icon,
+    html.sl-theme-dark .nav-tabs-wrapper sl-button[variant="default"]:hover span {
+      color: #ffffff !important;
+      fill: #ffffff !important;
+    }
+
+    /* Aba Inativa (variant="default") - Modo Claro */
+    html:not(.sl-theme-dark) .nav-tabs-wrapper sl-button[variant="default"]::part(base) {
+      background: #ffffff !important;
+      border: 1px solid #cbd5e1 !important;
+      color: #334155 !important;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    }
+    html:not(.sl-theme-dark) .nav-tabs-wrapper sl-button[variant="default"]::part(label),
+    html:not(.sl-theme-dark) .nav-tabs-wrapper sl-button[variant="default"]::part(prefix) {
+      color: #334155 !important;
+    }
+    html:not(.sl-theme-dark) .nav-tabs-wrapper sl-button[variant="default"] sl-icon {
+      color: #64748b !important;
+      fill: #64748b !important;
+    }
+    html:not(.sl-theme-dark) .nav-tabs-wrapper sl-button[variant="default"] span {
+      color: #334155 !important;
+    }
+    html:not(.sl-theme-dark) .nav-tabs-wrapper sl-button[variant="default"]:hover::part(base) {
+      background: #f1f5f9 !important;
+      color: #0f172a !important;
+    }
+    html:not(.sl-theme-dark) .nav-tabs-wrapper sl-button[variant="default"]:hover sl-icon,
+    html:not(.sl-theme-dark) .nav-tabs-wrapper sl-button[variant="default"]:hover span {
+      color: #0f172a !important;
+      fill: #0f172a !important;
     }
     .container {
       padding: 20px;
@@ -166,6 +264,162 @@
     .active-genre-pill:hover {
       background: #388e3c;
       transform: scale(1.03);
+    }
+
+    /* Toolbar de Filtros Moderna e Elegante */
+    .spreadsheet-toolbar {
+      background: linear-gradient(160deg, rgba(26, 35, 51, 0.95), rgba(18, 23, 35, 0.98));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      backdrop-filter: blur(10px);
+    }
+
+    .spreadsheet-filters-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .filter-input-search {
+      flex: 2;
+      min-width: 200px;
+    }
+
+    .filter-select-item {
+      flex: 1;
+      min-width: 160px;
+    }
+
+    /* Customização dos componentes Shoelace na toolbar */
+    .spreadsheet-toolbar sl-input::part(base),
+    .spreadsheet-toolbar sl-select::part(combobox) {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      font-size: 12.5px;
+    }
+
+    .spreadsheet-toolbar sl-input::part(base):hover,
+    .spreadsheet-toolbar sl-select::part(combobox):hover {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba(255, 255, 255, 0.22);
+    }
+
+    .spreadsheet-toolbar sl-input:focus-within::part(base),
+    .spreadsheet-toolbar sl-select:focus-within::part(combobox) {
+      border-color: #10b981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+
+    /* Destaque quando o filtro está com valor selecionado */
+    .spreadsheet-toolbar sl-select.filter-has-value::part(combobox) {
+      border-color: rgba(16, 185, 129, 0.6);
+      background: rgba(16, 185, 129, 0.08);
+      color: #34d399;
+      font-weight: 600;
+    }
+
+    /* Menu Dropdown Popup dos Selects (adeus azul neon!) */
+    sl-select, sl-option {
+      --sl-color-primary-600: rgba(16, 185, 129, 0.25) !important;
+      --sl-color-primary-500: #10b981 !important;
+      --sl-color-primary-text: #ffffff !important;
+      --sl-color-neutral-0: #34d399 !important;
+      --sl-color-neutral-100: rgba(255, 255, 255, 0.08) !important;
+      --sl-color-neutral-700: var(--text-main, #e0e0e0) !important;
+      --sl-color-neutral-1000: #ffffff !important;
+    }
+
+    sl-select::part(listbox) {
+      background: #161d2b !important;
+      border: 1px solid rgba(255, 255, 255, 0.14) !important;
+      border-radius: 10px !important;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0,0,0,0.4) !important;
+      padding: 6px !important;
+      max-height: 380px !important;
+    }
+
+    sl-option::part(base) {
+      border-radius: 6px;
+      margin: 2px 0;
+      padding: 6px 10px;
+      font-size: 12.5px;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    sl-option::part(base):hover {
+      background-color: rgba(255, 255, 255, 0.08) !important;
+    }
+
+    sl-option::part(checked-icon) {
+      color: #34d399 !important;
+    }
+
+    /* Pílula discreta de meses na temporada */
+    .season-months-pill {
+      font-size: 10px;
+      font-weight: 500;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted, #94a3b8);
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+
+    /* Botão Limpar Filtros */
+    .btn-clear-filters::part(base) {
+      border-radius: 8px;
+      border-color: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.03);
+      font-size: 12px;
+      transition: all 0.2s ease;
+      color: var(--text-muted);
+    }
+
+    .btn-clear-filters:hover::part(base) {
+      background: rgba(239, 68, 68, 0.12) !important;
+      border-color: rgba(239, 68, 68, 0.4) !important;
+      color: #f87171 !important;
+    }
+
+    .btn-clear-filters.visible-active::part(base) {
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    /* Rodapé da Toolbar */
+    .spreadsheet-toolbar-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .live-status-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulseDot 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
     }
     .btn-action-icon {
       display: inline-flex;
@@ -391,25 +645,28 @@
     <!-- Container Principal da Planilha e Filtros -->
     <div id="spreadsheetContent" style="display: none;">
       <!-- Barra de Filtros Avançados (Estilo Excel Toolbar) -->
-      <div class="spreadsheet-toolbar" style="background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px;">
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+      <div class="spreadsheet-toolbar">
+        <div class="spreadsheet-filters-row">
           <!-- Busca Textual -->
-          <sl-input id="filtroTexto" placeholder="Buscar por título ou estúdio..." data-i18n-placeholder="spreadsheet_search_placeholder" size="small" clearable style="flex: 2; min-width: 200px;">
-            <sl-icon slot="prefix" name="search"></sl-icon>
+          <sl-input id="filtroTexto" placeholder="Buscar por título ou estúdio..." data-i18n-placeholder="spreadsheet_search_placeholder" size="small" clearable class="filter-input-search">
+            <sl-icon slot="prefix" name="search" style="color: var(--text-muted); font-size: 13px;"></sl-icon>
           </sl-input>
 
           <!-- Filtro Temporada -->
-          <sl-select id="filtroTemporada" size="small" value="todas" hoist style="flex: 1; min-width: 170px;">
+          <sl-select id="filtroTemporada" size="small" value="todas" hoist class="filter-select-item">
+            <sl-icon slot="prefix" name="calendar-event" style="color: #60a5fa; font-size: 13px; margin-right: 4px;"></sl-icon>
             <sl-option value="todas" data-i18n="spreadsheet_season_filter">Todas as Temporadas</sl-option>
           </sl-select>
 
           <!-- Filtro Gênero -->
-          <sl-select id="filtroGenero" size="small" value="todos" hoist style="flex: 1; min-width: 160px;">
+          <sl-select id="filtroGenero" size="small" value="todos" hoist class="filter-select-item">
+            <sl-icon slot="prefix" name="tags" style="color: #a78bfa; font-size: 13px; margin-right: 4px;"></sl-icon>
             <sl-option value="todos" data-i18n="spreadsheet_genre_filter">Todos os Gêneros</sl-option>
           </sl-select>
 
           <!-- Filtro Nota Pessoal -->
-          <sl-select id="filtroNota" size="small" value="todas" hoist style="flex: 1; min-width: 150px;">
+          <sl-select id="filtroNota" size="small" value="todas" hoist class="filter-select-item">
+            <sl-icon slot="prefix" name="star-fill" style="color: #fbbf24; font-size: 13px; margin-right: 4px;"></sl-icon>
             <sl-option value="todas">Nota: Todas</sl-option>
             <sl-option value="10">Nota: 10</sl-option>
             <sl-option value="9">Nota: 9+</sl-option>
@@ -420,26 +677,33 @@
           </sl-select>
 
           <!-- Filtro Streaming -->
-          <sl-select id="filtroStreaming" size="small" value="todos" hoist style="flex: 1; min-width: 160px;">
+          <sl-select id="filtroStreaming" size="small" value="todos" hoist class="filter-select-item">
+            <sl-icon slot="prefix" name="broadcast" style="color: #34d399; font-size: 13px; margin-right: 4px;"></sl-icon>
             <sl-option value="todos">Streaming: Todos</sl-option>
           </sl-select>
 
           <!-- Botão Limpar Filtros -->
-          <sl-button id="btnLimparFiltros" size="small" variant="default" outline style="flex-shrink: 0;">
+          <sl-button id="btnLimparFiltros" size="small" variant="default" outline class="btn-clear-filters">
             <sl-icon slot="prefix" name="funnel"></sl-icon>
-            <span data-i18n="spreadsheet_clear_filters">Limpar Filtros</span>
+            <span data-i18n="spreadsheet_clear_filters">Limpar</span>
           </sl-button>
         </div>
 
         <!-- Barra de Gêneros Selecionados (Multi-Filtro) -->
-        <div id="containerGenerosAtivos" style="display: none; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid var(--border-color, rgba(255,255,255,0.06)); font-size: 12px;">
-          <span style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-weight: 700;">Gêneros combinados:</span>
+        <div id="containerGenerosAtivos" style="display: none; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 12px;">
+          <span style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Gêneros combinados:</span>
           <div id="listaChipsGenerosAtivos" style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;"></div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-muted); padding-top: 4px; border-top: 1px solid var(--border-color, rgba(255,255,255,0.06));">
-          <span id="lblContadorObras">Exibindo 0 de 0 obras</span>
-          <span id="lblOrdenacaoAtiva" style="font-style: italic;">Ordenado por: Nota Pessoal (Maior para Menor)</span>
+        <div class="spreadsheet-toolbar-footer">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="live-status-dot"></span>
+            <span id="lblContadorObras" style="font-weight: 600; color: var(--text-main);">Exibindo 0 de 0 obras</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <sl-icon name="arrow-down-up" style="font-size: 11px; opacity: 0.7;"></sl-icon>
+            <span id="lblOrdenacaoAtiva" style="font-style: italic; font-size: 11px;">Ordenado por: Ranking (Menor para Maior)</span>
+          </div>
         </div>
       </div>
 

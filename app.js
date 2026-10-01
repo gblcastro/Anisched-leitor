@@ -1284,6 +1284,26 @@ async function carregarPlanilhaRanking(fileId) {
   }
 }
 
+function obterPesoTemporada(nome) {
+  if (!nome) return 0;
+  const n = String(nome).toLowerCase();
+  if (n.includes("outono") || n.includes("fall")) return 4;
+  if (n.includes("verão") || n.includes("verao") || n.includes("summer")) return 3;
+  if (n.includes("primavera") || n.includes("spring")) return 2;
+  if (n.includes("inverno") || n.includes("winter")) return 1;
+  return 0;
+}
+
+function obterMesesTemporada(nome) {
+  if (!nome) return "";
+  const n = String(nome).toLowerCase();
+  if (n.includes("inverno") || n.includes("winter")) return "Jan - Mar";
+  if (n.includes("primavera") || n.includes("spring")) return "Abr - Jun";
+  if (n.includes("verão") || n.includes("verao") || n.includes("summer")) return "Jul - Set";
+  if (n.includes("outono") || n.includes("fall")) return "Out - Dez";
+  return "";
+}
+
 function renderizarPlanilha(dados) {
   const loadingEl = document.getElementById("spreadsheetLoading");
   const contentEl = document.getElementById("spreadsheetContent");
@@ -1292,6 +1312,38 @@ function renderizarPlanilha(dados) {
   if (loadingEl) loadingEl.style.display = "none";
   if (promptEl) promptEl.style.display = "none";
   if (contentEl) contentEl.style.display = "block";
+
+  // Reconcilia e garante que o rank_temporada siga rigorosamente maior nota primeiro dentro de cada temporada
+  if (dados && Array.isArray(dados.animes)) {
+    const animesPorTemp = new Map();
+    dados.animes.forEach(a => {
+      const tId = a.temporada_id || a.temporada_nome || "sem_temp";
+      if (!animesPorTemp.has(tId)) animesPorTemp.set(tId, []);
+      animesPorTemp.get(tId).push(a);
+    });
+
+    animesPorTemp.forEach(lista => {
+      lista.sort((a, b) => {
+        const temA = a.nota_pessoal !== null && a.nota_pessoal !== undefined && !isNaN(a.nota_pessoal);
+        const temB = b.nota_pessoal !== null && b.nota_pessoal !== undefined && !isNaN(b.nota_pessoal);
+        if (temA && !temB) return -1;
+        if (!temA && temB) return 1;
+        if (!temA && !temB) return (a.titulo || "").localeCompare(b.titulo || "");
+        if (b.nota_pessoal !== a.nota_pessoal) return b.nota_pessoal - a.nota_pessoal;
+        return (a.rank_temporada || 9999) - (b.rank_temporada || 9999);
+      });
+
+      let rCounter = 1;
+      lista.forEach(a => {
+        const temNota = a.nota_pessoal !== null && a.nota_pessoal !== undefined && !isNaN(a.nota_pessoal);
+        if (temNota) {
+          a.rank_temporada = rCounter++;
+        } else {
+          a.rank_temporada = null;
+        }
+      });
+    });
+  }
 
   const statTotal = document.getElementById("statTotalObras");
   const statMedia = document.getElementById("statMediaNotas");
@@ -1314,22 +1366,41 @@ function renderizarPlanilha(dados) {
   }
 
   const filtroTemporada = document.getElementById("filtroTemporada");
-  if (filtroTemporada && filtroTemporada.children.length <= 1) {
+  if (filtroTemporada && filtroTemporada.querySelectorAll("sl-option").length <= 1) {
     const tempsUnicas = new Set();
     (dados.animes || []).forEach(a => {
-      if (a.temporada_nome) tempsUnicas.add(JSON.stringify({ id: a.temporada_id, nome: a.temporada_nome }));
+      if (a.temporada_nome) tempsUnicas.add(JSON.stringify({ id: a.temporada_id, nome: a.temporada_nome, ano: a.ano }));
     });
     
-    Array.from(tempsUnicas).map(s => JSON.parse(s)).forEach(t => {
+    const listaTemps = Array.from(tempsUnicas).map(s => JSON.parse(s));
+    listaTemps.sort((a, b) => {
+      const anoA = a.ano || (parseInt(String(a.nome).replace(/\D/g, ''), 10) || 0);
+      const anoB = b.ano || (parseInt(String(b.nome).replace(/\D/g, ''), 10) || 0);
+      if (anoA !== anoB) return anoB - anoA;
+      return obterPesoTemporada(b.nome) - obterPesoTemporada(a.nome);
+    });
+
+    listaTemps.forEach(t => {
       const opt = document.createElement("sl-option");
       opt.value = t.id;
-      opt.innerText = t.nome;
+      const meses = obterMesesTemporada(t.nome);
+      if (meses) {
+        opt.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 12px;">
+            <span style="font-weight: 500;">${t.nome}</span>
+            <span class="season-months-pill">${meses}</span>
+          </div>
+        `;
+        opt.getTextLabel = () => `${t.nome} · ${meses}`;
+      } else {
+        opt.innerText = t.nome;
+      }
       filtroTemporada.appendChild(opt);
     });
   }
 
   const filtroGenero = document.getElementById("filtroGenero");
-  if (filtroGenero && filtroGenero.children.length <= 1) {
+  if (filtroGenero && filtroGenero.querySelectorAll("sl-option").length <= 1) {
     const generosSet = new Set();
     (dados.animes || []).forEach(a => {
       (a.generos || []).forEach(g => generosSet.add(g));
@@ -1347,7 +1418,7 @@ function renderizarPlanilha(dados) {
   }
 
   const filtroStreaming = document.getElementById("filtroStreaming");
-  if (filtroStreaming && filtroStreaming.children.length <= 1) {
+  if (filtroStreaming && filtroStreaming.querySelectorAll("sl-option").length <= 1) {
     const streamingsSet = new Set();
     (dados.animes || []).forEach(a => {
       if (a.streaming_nome) streamingsSet.add(a.streaming_nome);
@@ -1418,16 +1489,6 @@ function atualizarVisualFiltroGeneros() {
   }
 }
 
-function obterPesoTemporada(nome) {
-  if (!nome) return 0;
-  const n = String(nome).toLowerCase();
-  if (n.includes("outono") || n.includes("fall")) return 4;
-  if (n.includes("verão") || n.includes("verao") || n.includes("summer")) return 3;
-  if (n.includes("primavera") || n.includes("spring")) return 2;
-  if (n.includes("inverno") || n.includes("winter")) return 1;
-  return 0;
-}
-
 function aplicarFiltrosEOrdenacao() {
   if (!rankingGlobalData || !Array.isArray(rankingGlobalData.animes)) return;
 
@@ -1435,6 +1496,26 @@ function aplicarFiltrosEOrdenacao() {
   const selTemp = document.getElementById("filtroTemporada")?.value || "todas";
   const selNota = document.getElementById("filtroNota")?.value || "todas";
   const selStream = document.getElementById("filtroStreaming")?.value || "todos";
+
+  const elTemp = document.getElementById("filtroTemporada");
+  const elNota = document.getElementById("filtroNota");
+  const elStream = document.getElementById("filtroStreaming");
+  const elGen = document.getElementById("filtroGenero");
+  const btnLimpar = document.getElementById("btnLimparFiltros");
+
+  if (elTemp) elTemp.classList.toggle("filter-has-value", selTemp !== "todas");
+  if (elNota) elNota.classList.toggle("filter-has-value", selNota !== "todas");
+  if (elStream) elStream.classList.toggle("filter-has-value", selStream !== "todos");
+  if (elGen) elGen.classList.toggle("filter-has-value", generosFiltroAtivos.size > 0);
+
+  const hasFiltrosAtivos = Boolean(
+    txtBusca || 
+    selTemp !== "todas" || 
+    selNota !== "todas" || 
+    selStream !== "todos" || 
+    generosFiltroAtivos.size > 0
+  );
+  if (btnLimpar) btnLimpar.classList.toggle("visible-active", hasFiltrosAtivos);
 
   rankingObrasFiltradas = rankingGlobalData.animes.filter(a => {
     if (txtBusca) {
@@ -1487,22 +1568,12 @@ function aplicarFiltrosEOrdenacao() {
     if (!temNotaA && temNotaB) return 1;
     if (!temNotaA && !temNotaB) return (a.titulo || "").localeCompare(b.titulo || "");
 
-    // Se uma temporada específica está filtrada, o rank da temporada tem prioridade máxima
-    if (selTemp !== "todas") {
-      const rA = (a.rank_temporada !== null && a.rank_temporada !== undefined) ? a.rank_temporada : 9999;
-      const rB = (b.rank_temporada !== null && b.rank_temporada !== undefined) ? b.rank_temporada : 9999;
-      if (rA !== rB) return rA - rB;
-      if (a.nota_pessoal !== b.nota_pessoal) return b.nota_pessoal - a.nota_pessoal;
-      return (a.titulo || "").localeCompare(b.titulo || "");
-    }
-
-    // Para "Todas as temporadas":
-    // 1º: Sua Nota decrescente (10 > 9 > 8)
+    // 1º Critério Absoluto: Sua Nota decrescente (10 > 9 > 8 > 7 > 6...)
     if (b.nota_pessoal !== a.nota_pessoal) {
       return b.nota_pessoal - a.nota_pessoal;
     }
 
-    // 2º: Desempate pela colocação na temporada (o #1 ou #2 da temporada vem na frente do #13)
+    // 2º Critério: Desempate pela colocação na temporada (o melhor rankeado na temporada vem na frente)
     const rA = (a.rank_temporada !== null && a.rank_temporada !== undefined) ? a.rank_temporada : 9999;
     const rB = (b.rank_temporada !== null && b.rank_temporada !== undefined) ? b.rank_temporada : 9999;
     if (rA !== rB) return rA - rB;
