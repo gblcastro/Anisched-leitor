@@ -1065,7 +1065,7 @@ window.togglePremiereColor = function(el, animeId) {
 // ==========================================
 let rankingGlobalData = null;
 let rankingObrasFiltradas = [];
-let ordenacaoAtual = { coluna: "nota_pessoal", direcao: "desc" };
+let ordenacaoAtual = { coluna: "rank_geral", direcao: "asc" };
 let generosFiltroAtivos = new Set();
 
 function obterParametroUrl(nome) {
@@ -1418,6 +1418,16 @@ function atualizarVisualFiltroGeneros() {
   }
 }
 
+function obterPesoTemporada(nome) {
+  if (!nome) return 0;
+  const n = String(nome).toLowerCase();
+  if (n.includes("outono") || n.includes("fall")) return 4;
+  if (n.includes("verão") || n.includes("verao") || n.includes("summer")) return 3;
+  if (n.includes("primavera") || n.includes("spring")) return 2;
+  if (n.includes("inverno") || n.includes("winter")) return 1;
+  return 0;
+}
+
 function aplicarFiltrosEOrdenacao() {
   if (!rankingGlobalData || !Array.isArray(rankingGlobalData.animes)) return;
 
@@ -1466,49 +1476,143 @@ function aplicarFiltrosEOrdenacao() {
     return true;
   });
 
+  // Ordenação Base / Mestre para calcular o ranking dinâmico na visão atual
+  // Prioriza 100% as notas e rankings definidos pelo usuário (sem notas públicas)
+  rankingObrasFiltradas.sort((a, b) => {
+    const temNotaA = a.nota_pessoal !== null && a.nota_pessoal !== undefined && !isNaN(a.nota_pessoal);
+    const temNotaB = b.nota_pessoal !== null && b.nota_pessoal !== undefined && !isNaN(b.nota_pessoal);
+
+    // Obras sem nota vão SEMPRE para o final
+    if (temNotaA && !temNotaB) return -1;
+    if (!temNotaA && temNotaB) return 1;
+    if (!temNotaA && !temNotaB) return (a.titulo || "").localeCompare(b.titulo || "");
+
+    // Se uma temporada específica está filtrada, o rank da temporada tem prioridade máxima
+    if (selTemp !== "todas") {
+      const rA = (a.rank_temporada !== null && a.rank_temporada !== undefined) ? a.rank_temporada : 9999;
+      const rB = (b.rank_temporada !== null && b.rank_temporada !== undefined) ? b.rank_temporada : 9999;
+      if (rA !== rB) return rA - rB;
+      if (a.nota_pessoal !== b.nota_pessoal) return b.nota_pessoal - a.nota_pessoal;
+      return (a.titulo || "").localeCompare(b.titulo || "");
+    }
+
+    // Para "Todas as temporadas":
+    // 1º: Sua Nota decrescente (10 > 9 > 8)
+    if (b.nota_pessoal !== a.nota_pessoal) {
+      return b.nota_pessoal - a.nota_pessoal;
+    }
+
+    // 2º: Desempate pela colocação na temporada (o #1 ou #2 da temporada vem na frente do #13)
+    const rA = (a.rank_temporada !== null && a.rank_temporada !== undefined) ? a.rank_temporada : 9999;
+    const rB = (b.rank_temporada !== null && b.rank_temporada !== undefined) ? b.rank_temporada : 9999;
+    if (rA !== rB) return rA - rB;
+
+    // 3º: Desempate cronológico (temporada e ano mais recente)
+    const anoA = a.ano || 0;
+    const anoB = b.ano || 0;
+    if (anoA !== anoB) return anoB - anoA;
+
+    const pesoA = obterPesoTemporada(a.temporada_nome);
+    const pesoB = obterPesoTemporada(b.temporada_nome);
+    if (pesoA !== pesoB) return pesoB - pesoA;
+
+    // 4º: Alfabético
+    return (a.titulo || "").localeCompare(b.titulo || "");
+  });
+
+  // Atribui o ranking sequencial ativo (1º, 2º, 3º...) sem pular números
+  let rankSeqCounter = 1;
+  rankingObrasFiltradas.forEach(obra => {
+    const temNota = obra.nota_pessoal !== null && obra.nota_pessoal !== undefined && !isNaN(obra.nota_pessoal);
+    if (temNota) {
+      obra.rank_ativo = rankSeqCounter++;
+    } else {
+      obra.rank_ativo = null;
+    }
+  });
+
   const col = ordenacaoAtual.coluna;
   const dir = ordenacaoAtual.direcao === "asc" ? 1 : -1;
 
-  rankingObrasFiltradas.sort((a, b) => {
-    if (col === "nota_pessoal") {
-      const temA = a.nota_pessoal !== null && a.nota_pessoal !== undefined;
-      const temB = b.nota_pessoal !== null && b.nota_pessoal !== undefined;
-      if (temA && !temB) return -1 * dir;
-      if (!temA && temB) return 1 * dir;
-      if (temA && temB && a.nota_pessoal !== b.nota_pessoal) {
-        return (a.nota_pessoal - b.nota_pessoal) * dir;
+  // Se a coluna for rank_geral e asc, já está perfeitamente ordenado pelo Master Rank!
+  if (col !== "rank_geral" || dir !== 1) {
+    rankingObrasFiltradas.sort((a, b) => {
+      const temNotaA = a.nota_pessoal !== null && a.nota_pessoal !== undefined && !isNaN(a.nota_pessoal);
+      const temNotaB = b.nota_pessoal !== null && b.nota_pessoal !== undefined && !isNaN(b.nota_pessoal);
+
+      if (col === "rank_geral") {
+        if (temNotaA && !temNotaB) return -1;
+        if (!temNotaA && temNotaB) return 1;
+        if (!temNotaA && !temNotaB) return (a.titulo || "").localeCompare(b.titulo || "");
+        return (a.rank_ativo - b.rank_ativo) * dir;
       }
-      const pubA = a.nota_mal || a.nota_anilist || 0;
-      const pubB = b.nota_mal || b.nota_anilist || 0;
-      if (pubA !== pubB) return (pubA - pubB) * dir;
-      return ((a.rank_geral || 9999) - (b.rank_geral || 9999)) * dir;
-    }
-    if (col === "rank_geral") {
-      const rA = (a.rank_geral !== null && a.rank_geral !== undefined) ? a.rank_geral : 99999;
-      const rB = (b.rank_geral !== null && b.rank_geral !== undefined) ? b.rank_geral : 99999;
-      return (rA - rB) * dir;
-    }
-    if (col === "titulo") {
-      return (a.titulo || "").localeCompare(b.titulo || "") * dir;
-    }
-    if (col === "temporada") {
-      const anoA = a.ano || 0;
-      const anoB = b.ano || 0;
-      if (anoA !== anoB) return (anoA - anoB) * dir;
-      return (a.temporada_nome || "").localeCompare(b.temporada_nome || "") * dir;
-    }
-    if (col === "nota_publica") {
-      const pA = a.nota_mal || a.nota_anilist || -1;
-      const pB = b.nota_mal || b.nota_anilist || -1;
-      return (pA - pB) * dir;
-    }
-    if (col === "episodios") {
-      const epA = a.episodios || 0;
-      const epB = b.episodios || 0;
-      return (epA - epB) * dir;
-    }
-    return 0;
-  });
+
+      if (col === "nota_pessoal") {
+        if (temNotaA && !temNotaB) return -1;
+        if (!temNotaA && temNotaB) return 1;
+        if (!temNotaA && !temNotaB) return (a.titulo || "").localeCompare(b.titulo || "");
+
+        if (a.nota_pessoal !== b.nota_pessoal) {
+          return (a.nota_pessoal - b.nota_pessoal) * dir;
+        }
+
+        // Desempate inteligente (totalmente desvinculado de nota pública)
+        const rA = (a.rank_temporada !== null && a.rank_temporada !== undefined) ? a.rank_temporada : 9999;
+        const rB = (b.rank_temporada !== null && b.rank_temporada !== undefined) ? b.rank_temporada : 9999;
+        if (rA !== rB) return rA - rB;
+
+        const anoA = a.ano || 0;
+        const anoB = b.ano || 0;
+        if (anoA !== anoB) return anoB - anoA;
+
+        return (a.titulo || "").localeCompare(b.titulo || "");
+      }
+
+      if (col === "temporada") {
+        const anoA = a.ano || 0;
+        const anoB = b.ano || 0;
+        if (anoA !== anoB) return (anoA - anoB) * dir;
+
+        const pA = obterPesoTemporada(a.temporada_nome);
+        const pB = obterPesoTemporada(b.temporada_nome);
+        if (pA !== pB) return (pA - pB) * dir;
+
+        // Dentro da mesma temporada, respeita a colocação da temporada
+        if (temNotaA && !temNotaB) return -1;
+        if (!temNotaA && temNotaB) return 1;
+        const rA = (a.rank_temporada !== null && a.rank_temporada !== undefined) ? a.rank_temporada : 9999;
+        const rB = (b.rank_temporada !== null && b.rank_temporada !== undefined) ? b.rank_temporada : 9999;
+        if (rA !== rB) return rA - rB;
+
+        return (a.titulo || "").localeCompare(b.titulo || "");
+      }
+
+      if (col === "nota_publica") {
+        const pA = (a.nota_mal !== null && a.nota_mal !== undefined) ? a.nota_mal : ((a.nota_anilist !== null && a.nota_anilist !== undefined) ? a.nota_anilist : null);
+        const pB = (b.nota_mal !== null && b.nota_mal !== undefined) ? b.nota_mal : ((b.nota_anilist !== null && b.nota_anilist !== undefined) ? b.nota_anilist : null);
+
+        if (pA !== null && pB === null) return -1;
+        if (pA === null && pB !== null) return 1;
+        if (pA === null && pB === null) return (a.titulo || "").localeCompare(b.titulo || "");
+
+        if (pA !== pB) return (pA - pB) * dir;
+        return (a.titulo || "").localeCompare(b.titulo || "");
+      }
+
+      if (col === "titulo") {
+        return (a.titulo || "").localeCompare(b.titulo || "") * dir;
+      }
+
+      if (col === "episodios") {
+        const epA = a.episodios || 0;
+        const epB = b.episodios || 0;
+        if (epA !== epB) return (epA - epB) * dir;
+        return (a.titulo || "").localeCompare(b.titulo || "");
+      }
+
+      return 0;
+    });
+  }
 
   const lblContador = document.getElementById("lblContadorObras");
   if (lblContador) {
@@ -1519,11 +1623,11 @@ function aplicarFiltrosEOrdenacao() {
   if (lblOrd) {
     const nomeColMap = {
       nota_pessoal: "Sua Nota",
-      rank_geral: "Rank Geral",
-      titulo: "Título",
+      rank_geral: "Ranking",
+      titulo: "Obra",
       temporada: "Temporada",
-      nota_publica: "Nota Pública",
-      episodios: "Episódios"
+      nota_publica: "Notas Públicas",
+      episodios: "Status"
     };
     lblOrd.innerText = `Ordenado por: ${nomeColMap[col] || col} (${ordenacaoAtual.direcao === "desc" ? "Maior para Menor" : "Menor para Maior"})`;
   }
@@ -1544,11 +1648,11 @@ function aplicarFiltrosEOrdenacao() {
     tr.className = "spreadsheet-row";
 
     let rankGeralHtml = `<span style="color: var(--text-muted); opacity: 0.4; font-weight: 700;">-</span>`;
-    if (obra.rank_geral !== null && obra.rank_geral !== undefined) {
-      if (obra.rank_geral === 1) rankGeralHtml = `<span style="font-size: 15px; font-weight: 900; color: #fbbf24;">🥇 1º</span>`;
-      else if (obra.rank_geral === 2) rankGeralHtml = `<span style="font-size: 14px; font-weight: 800; color: #cbd5e1;">🥈 2º</span>`;
-      else if (obra.rank_geral === 3) rankGeralHtml = `<span style="font-size: 14px; font-weight: 800; color: #d97706;">🥉 3º</span>`;
-      else rankGeralHtml = `<span style="font-weight: 700; color: var(--text-muted);">${obra.rank_geral}º</span>`;
+    if (obra.rank_ativo !== null && obra.rank_ativo !== undefined) {
+      if (obra.rank_ativo === 1) rankGeralHtml = `<span style="font-size: 15px; font-weight: 900; color: #fbbf24;">🥇 1º</span>`;
+      else if (obra.rank_ativo === 2) rankGeralHtml = `<span style="font-size: 14px; font-weight: 800; color: #cbd5e1;">🥈 2º</span>`;
+      else if (obra.rank_ativo === 3) rankGeralHtml = `<span style="font-size: 14px; font-weight: 800; color: #d97706;">🥉 3º</span>`;
+      else rankGeralHtml = `<span style="font-weight: 700; color: var(--text-muted);">${obra.rank_ativo}º</span>`;
     }
 
     const coverImg = obra.cover_url 
